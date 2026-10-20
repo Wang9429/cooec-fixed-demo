@@ -174,6 +174,7 @@ export function IconBrandMark(p: IconProps) {
 
 export const NAV_ICONS: Record<string, React.FC<IconProps>> = {
   P00: IconOverview,
+  INV: IconBars,
   P20: IconBars,
   P10: IconLayers,
   P30: IconGlobe,

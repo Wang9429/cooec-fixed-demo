@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
-import { INVESTMENT_NAV_IDS, NAV_ITEMS } from "@/lib/seed";
+import React, { useMemo, useState } from "react";
+import { DOMAIN_META, INVESTMENT_NAV_ID, NAV_ITEMS, isInvestmentPath } from "@/lib/seed";
 import { can, canDomain, config, riskVisible } from "@/lib/config";
 import { useDemoStore } from "@/lib/store";
 import { Modal } from "@/components/ui";
@@ -19,14 +19,6 @@ import {
 } from "@/components/icons";
 
 const UI_VERSION = "1.6.1";
-
-function NavChevron({ open }: { open: boolean }) {
-  return (
-    <svg className={`reg-nav-chevron${open ? " is-open" : ""}`} width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-      <path d="M5 3.2 9 7 5 10.8" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 const PAGE_OWNS_FILTER = [
   "/overview",
@@ -49,10 +41,11 @@ function breadcrumb(pathname: string): { parent: string; current: string } {
   if (pathname.startsWith("/scenario-library")) return { parent: "系统配置", current: "场景规则库" };
   if (pathname.startsWith("/data-sources")) return { parent: "系统配置", current: "数据与运行" };
   if (pathname.startsWith("/object/")) return { parent: "穿透式监管", current: "对象档案" };
-  const nav = NAV_ITEMS.find((item) => routeActive(pathname, item.route));
-  if (nav && (INVESTMENT_NAV_IDS as readonly string[]).includes(nav.id)) {
-    return { parent: "投资管理", current: nav.label };
+  if (isInvestmentPath(pathname)) {
+    const current = routeActive(pathname, DOMAIN_META.EQ.route) ? DOMAIN_META.EQ.label : DOMAIN_META.FA.label;
+    return { parent: "投资管理", current };
   }
+  const nav = NAV_ITEMS.find((item) => item.id !== INVESTMENT_NAV_ID && routeActive(pathname, item.route));
   return { parent: "穿透式监管", current: nav?.label ?? "综合总览" };
 }
 
@@ -66,20 +59,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     () => risks.filter((r) => isOpen(r) && riskVisible(user, r)).length,
     [risks, user],
   );
+  const canInvestment = canDomain(user, "FA") || canDomain(user, "EQ");
   const navItems = useMemo(
-    () => NAV_ITEMS.filter((item) => can(user, "business.read") && canDomain(user, item.domain)),
-    [user],
+    () =>
+      NAV_ITEMS.filter((item) => {
+        if (!can(user, "business.read")) return false;
+        if (item.id === INVESTMENT_NAV_ID) return canInvestment;
+        return canDomain(user, item.domain);
+      }),
+    [user, canInvestment],
   );
-  const investmentItems = navItems.filter((item) => (INVESTMENT_NAV_IDS as readonly string[]).includes(item.id));
-  const topItems = navItems.filter((item) => item.id === "P00");
-  const restItems = navItems.filter(
-    (item) => item.id !== "P00" && !(INVESTMENT_NAV_IDS as readonly string[]).includes(item.id),
-  );
-  const onInvestment = investmentItems.some((item) => routeActive(pathname, item.route));
-  const [investmentOpen, setInvestmentOpen] = useState(onInvestment);
-  useEffect(() => {
-    if (onInvestment) setInvestmentOpen(true);
-  }, [onInvestment]);
   const crumbs = breadcrumb(pathname);
   const ownsFilter = PAGE_OWNS_FILTER.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const showFilter = !pathname.startsWith("/settings") && !ownsFilter;
@@ -97,70 +86,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <ul className="reg-nav">
-          {topItems.map((item) => {
-            const active = routeActive(pathname, item.route);
+          {navItems.map((item) => {
+            const active = item.id === INVESTMENT_NAV_ID ? isInvestmentPath(pathname) : routeActive(pathname, item.route);
+            const href =
+              item.id === INVESTMENT_NAV_ID
+                ? canDomain(user, "FA")
+                  ? DOMAIN_META.FA.route
+                  : DOMAIN_META.EQ.route
+                : item.route;
             const Icon = NAV_ICONS[item.id] ?? NAV_ICONS.P00;
             return (
               <li key={item.id}>
                 <Link
-                  href={item.route}
+                  href={href}
                   className="reg-nav-link"
                   aria-current={active ? "page" : undefined}
-                  data-testid={`nav-${item.id}`}
-                >
-                  <Icon size={18} />
-                  <span className="reg-nav-label" title={item.label}>{item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-          {investmentItems.length > 0 && (
-            <li>
-              <button
-                type="button"
-                className={`reg-nav-link${onInvestment ? " reg-nav-parent-current" : ""}`}
-                aria-expanded={investmentOpen}
-                aria-controls="nav-investment-sub"
-                data-testid="nav-investment"
-                onClick={() => setInvestmentOpen((open) => !open)}
-              >
-                <NAV_ICONS.P20 size={18} />
-                <span className="reg-nav-label" title="投资管理">投资管理</span>
-                <NavChevron open={investmentOpen} />
-              </button>
-              {investmentOpen && (
-                <ul id="nav-investment-sub" className="reg-nav-sub">
-                  {investmentItems.map((item) => {
-                    const active = routeActive(pathname, item.route);
-                    const Icon = NAV_ICONS[item.id] ?? NAV_ICONS.P00;
-                    return (
-                      <li key={item.id}>
-                        <Link
-                          href={item.route}
-                          className="reg-nav-link"
-                          aria-current={active ? "page" : undefined}
-                          data-testid={`nav-${item.id}`}
-                        >
-                          <Icon size={18} />
-                          <span className="reg-nav-label" title={item.label}>{item.label}</span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </li>
-          )}
-          {restItems.map((item) => {
-            const active = routeActive(pathname, item.route);
-            const Icon = NAV_ICONS[item.id] ?? NAV_ICONS.P00;
-            return (
-              <li key={item.id}>
-                <Link
-                  href={item.route}
-                  className="reg-nav-link"
-                  aria-current={active ? "page" : undefined}
-                  data-testid={`nav-${item.id}`}
+                  data-testid={item.id === INVESTMENT_NAV_ID ? "nav-investment" : `nav-${item.id}`}
                 >
                   <Icon size={18} />
                   <span className="reg-nav-label" title={item.label}>{item.label}</span>

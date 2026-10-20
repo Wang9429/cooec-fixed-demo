@@ -9,6 +9,7 @@ import ScenarioExecutionPanel, { type SubtopicOption } from "@/components/Scenar
 import ObjectDrawer from "@/components/ObjectDrawer";
 import { Button, Card, DataTable, KpiCard, SeverityTag, Tabs, Tag } from "@/components/ui";
 import FilterBar from "@/components/FilterBar";
+import InvestmentKindTabs from "@/components/InvestmentKindTabs";
 import PageHeader from "@/components/PageHeader";
 import { DOMAIN_META, phaseName, seed, templatesByDomain, topicName } from "@/lib/seed";
 import { computeIndicator, indicatorById, type IndicatorDef, type NodeMetric } from "@/lib/metrics";
@@ -218,6 +219,7 @@ export default function DomainPage({
 
   return (
     <div className="space-y-4">
+      {(domain === "FA" || domain === "EQ") && <InvestmentKindTabs current={domain} />}
       <PageHeader title={meta.label}>
         <FilterBar />
       </PageHeader>
