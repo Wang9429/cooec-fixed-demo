@@ -258,6 +258,42 @@ details > summary::-webkit-details-marker {
   white-space: nowrap;
 }
 
+.reg-nav-chevron {
+  margin-left: auto;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  color: inherit;
+  transition: transform 0.15s ease;
+}
+
+.reg-sidebar .reg-nav-link .reg-nav-chevron {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.reg-nav-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.reg-nav-sub {
+  margin: 0 0 4px 14px;
+  padding-left: 8px;
+  border-left: 1px solid #263c58;
+  list-style: none;
+}
+
+.reg-sidebar .reg-nav-sub a.reg-nav-link {
+  min-height: 44px;
+  margin-bottom: 2px;
+}
+
+.reg-sidebar button.reg-nav-link.reg-nav-parent-current,
+.reg-sidebar button.reg-nav-link.reg-nav-parent-current svg {
+  color: #ffffff;
+}
+
 .reg-sidebar-footer {
   flex-shrink: 0;
   padding: 12px;
