@@ -43,7 +43,7 @@ export const DISPLAY_POSITION_LABEL: Record<string, string> = {
 
 /** 领域编码（配置表短码） */
 export const DOMAIN_CODE_LABEL: Record<string, string> = {
-  FA: "固定资产",
+  FA: "投资管理",
   EQ: "股权投资",
   INTL: "国际化",
   CASH: "资金",

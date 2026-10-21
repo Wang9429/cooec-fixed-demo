@@ -25,6 +25,7 @@ import {
   taskTypeLabel,
 } from "@/lib/risks";
 import { DOMAIN_META, evidenceById, phaseName, scenarioName, seed, topicName } from "@/lib/seed";
+import { isRetiredScenarioId, isRetiredSupervisionDomain, visibleSupervisionDomains } from "@/lib/supervision-scope";
 import { orgPath } from "@/lib/org";
 import { daysBetween, fmtDate } from "@/lib/format";
 import { isIndependentReviewer, objectAllowed, riskVisible } from "@/lib/config";
@@ -232,7 +233,11 @@ function RiskCaseDrawerBody({
     );
   }
 
-  const links = seed.risk_context_links.filter((l) => l.risk_id === risk.id);
+  const links = seed.risk_context_links.filter(
+    (l) => l.risk_id === risk.id && !isRetiredSupervisionDomain(l.domain),
+  );
+  const visibleDomains = visibleSupervisionDomains(risk.domains);
+  const visibleScenarios = risk.scenario_ids.filter((id) => !isRetiredScenarioId(id));
   const evidences = risk.evidence_ids.map((id) => evidenceById(id)).filter(Boolean);
   const ruleEvals = allRuleEvaluations().filter(
     (e) => e.risk_ids.includes(risk.id) || (e.subject_object_id === risk.primary_object_id && e.rule_id === risk.rule_id),
@@ -317,7 +322,7 @@ function RiskCaseDrawerBody({
           <span>责任单位：{orgPath(risk.owner_org_id).map((o) => o.name).join(" / ")}</span>
           <span>
             涉及领域：
-            {risk.domains.map((d) => DOMAIN_META[d].label).join("、")}
+            {visibleDomains.map((d) => DOMAIN_META[d].label).join("、") || "—"}
           </span>
           {sourceLabel && <span>来源：{sourceLabel}</span>}
           <SimulatedBadge text={`数据性质：${dataNatureLabel(risk.data_nature)}`} />
@@ -480,13 +485,17 @@ function RiskCaseDrawerBody({
                     label: "关联监管场景",
                     value: (
                       <span className="flex flex-wrap gap-1">
-                        {risk.scenario_ids.map((s) => (
-                          <Tag key={s} tone={isScenarioMonitoringActive(s) ? "brand" : "neutral"}>
-                            {scenarioName(s)}
-                            <span className="num text-[11px] ml-1">场景编号 {s}</span>
-                            {!isScenarioMonitoringActive(s) ? " · 已停用" : ""}
-                          </Tag>
-                        ))}
+                        {visibleScenarios.length ? (
+                          visibleScenarios.map((s) => (
+                            <Tag key={s} tone={isScenarioMonitoringActive(s) ? "brand" : "neutral"}>
+                              {scenarioName(s)}
+                              <span className="num text-[11px] ml-1">场景编号 {s}</span>
+                              {!isScenarioMonitoringActive(s) ? " · 已停用" : ""}
+                            </Tag>
+                          ))
+                        ) : (
+                          "—"
+                        )}
                       </span>
                     ),
                   },
@@ -803,7 +812,7 @@ function RiskCaseDrawerBody({
                 ]}
               />
               <div className="flex flex-wrap gap-2">
-                {risk.domains.map((d) => (
+                {visibleDomains.map((d) => (
                   <Link
                     key={d}
                     href={DOMAIN_META[d].route}

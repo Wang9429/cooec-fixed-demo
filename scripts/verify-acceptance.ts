@@ -11,7 +11,7 @@ import { orgScope, ROOT_ORG_ID, isManagedUnit } from "../lib/org";
 import { computeFiveCounts, configuredScenarios, openCountForPhase } from "../lib/monitoring";
 import { evaluationsForPublish, trialCashS039, trialPtyS028, trialRule, trialCashS012, trialCashS029, trialCashS040, trialPtyS025, trialCashS006, trialCashS017, trialCashS020, trialPtyS003, trialPtyS011, trialPtyS014, trialPtyS016, trialPtyS037, trialPtyS038 } from "../lib/fp-rules";
 import { verificationFromEval, holdingRowsFor, holdingDiffNote, objectTitle, monitoringNoteLabel, inputFieldLabel, evidenceTitle } from "../lib/fp-display";
-import { extractCatalog, validateSub } from "../lib/config-catalog";
+import { DOMAIN_OPTIONS, extractCatalog, validateSub } from "../lib/config-catalog";
 import { lastExecutableCoverageNote } from "../lib/config-impact";
 import { cashAccountStatementBridge, cashBridgeNote } from "../lib/finance";
 import { CASH_S039_TOLERANCE_MAX_WAN } from "../lib/fp-tolerance";
@@ -39,6 +39,8 @@ import {
   overviewIndicatorOnHomepage,
   validHitRecords,
   visibleChildOrgs,
+  OVERVIEW_DOMAIN_ORDER,
+  inScopeProjects,
 } from "../lib/overview";
 import {
   drawerChildOrgs,
@@ -57,6 +59,7 @@ import { CASH2_BS_IDS, CASH2_LIQ_IDS, CASH2_PROFIT_IDS, COVERAGE_REPRESENTATIVE,
 import { CATEGORY_LABEL, computeTrendPoints, eligibleTrendPoints, trendSpecOf } from "../lib/fp-trend";
 import { CASH_OFFICIAL_PRIMARY_IDS, RIGHTS_OFFICIAL_PRIMARY_IDS, coveragePrimaries, officialDirectory, officialSubIds, scopedDirectory } from "../lib/fp-directory";
 import { scenarioAdoption, scenarioSourceLabel, SUPPLEMENTAL_SCENARIO_LABEL } from "../lib/seed";
+import { migrateSupervisionDomainIds, remainsInSupervisionScope } from "../lib/supervision-scope";
 
 const PERIOD_START = "2026-01-01";
 const PERIOD_END = AS_OF;
@@ -406,7 +409,18 @@ check("末级A1含下级与本级项目数相同", a1Stats.projectCount, a1Self)
 const bStats = orgNodeStats("ORG-B", overviewScopeHq);
 const bSelf = inScopeProjectCount(new Set(["ORG-B"]), null, PERIOD_START, PERIOD_END, AS_OF);
 check("无三级的单位B含下级与本级项目数相同", bStats.projectCount, bSelf);
-const faCard = overviewDomainCards(overviewScopeHq, () => true).find((c) => c.domain === "FA");
+const overviewCards = overviewDomainCards(overviewScopeHq, () => true);
+const faCard = overviewCards.find((c) => c.domain === "FA");
+check("总览领域卡顺序与侧栏一致且不含股权投资", overviewCards.map((c) => c.domain).join(","), OVERVIEW_DOMAIN_ORDER.join(","));
+check("总览不保留股权投资卡片", overviewCards.some((c) => c.domain === "EQ"), false);
+check(
+  "纳管项目不含股权投资专属项目",
+  inScopeProjects(HQ, null, PERIOD_START, PERIOD_END, AS_OF).some((p) => p.kind === "equity_project"),
+  false,
+);
+check("配置领域不再提供股权投资管理", DOMAIN_OPTIONS.some((d) => d.id === "EQ"), false);
+check("仅有股权投资权限时迁入投资管理", migrateSupervisionDomainIds(["EQ"]).join(","), "FA");
+check("已有投资管理权限不重复添加", migrateSupervisionDomainIds(["FA", "EQ"]).join(","), "FA");
 check("固定资产完成额与执行率同属FA-I06", Boolean(faCard && faCard.metrics.length === 2 && faCard.metrics.every((m) => m.indicatorId === "FA-I06")), true);
 check("固定资产主指标为投资计划执行率", faCard?.metrics[0]?.label, "投资计划执行率");
 check("固定资产辅助字段为投资完成额", faCard?.metrics[1]?.label, "投资完成额");
@@ -442,7 +456,24 @@ check("本期完成整改仍为关闭", completedRectificationCases(overviewScop
 check("原R01–R09仍在种子中", ["R01", "R02", "R03", "R04", "R05", "R06", "R07", "R08", "R09"].every((id) => seed.risk_cases.some((r) => r.id === id)), true);
 
 const hqSnaps = snapshotRisksAtAsOf(seed.risk_cases, AS_OF, seed.case_actions).filter((r) => HQ.has(r.owner_org_id));
-const stageHq = rectificationStageCensus(hqSnaps);
+const stageHq = rectificationStageCensus(hqSnaps.filter((r) => remainsInSupervisionScope(r.domains)));
+check(
+  "股权投资专属未关闭事项退出总览",
+  hqSnaps.filter((r) => isOpen(r) && !remainsInSupervisionScope(r.domains)).every((r) => !openRect.some((x) => x.id === r.id)),
+  true,
+);
+check(
+  "仍关联保留领域且已进入整改的共享事项留在总览",
+  hqSnaps
+    .filter(
+      (r) =>
+        remainsInSupervisionScope(r.domains) &&
+        r.domains.includes("EQ") &&
+        (r.status === "rectifying" || r.status === "pending_verification"),
+    )
+    .every((r) => openRect.some((x) => x.id === r.id)),
+  true,
+);
 check("总览未关闭整改等于整改中+待复核明细", openRect.map((r) => r.id).sort().join(","), stageHq.openRectification.join(","));
 check("种子待核查R-FP-032不计入未关闭整改", openRect.some((r) => r.id === "R-FP-032"), false);
 check("R01待核查不计入未关闭整改", openRect.some((r) => r.id === "R01"), false);

@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, DataTable, DescList, Drawer, EmptyState, Notice, SeverityTag, SimulatedBadge, Tabs, Tag } from "@/components/ui";
 import { findObject } from "@/lib/objects";
 import { DOMAIN_META, evidenceById, phaseName, scenarioName, seed, templateById } from "@/lib/seed";
+import { visibleSupervisionDomains } from "@/lib/supervision-scope";
 import { orgName, orgPath } from "@/lib/org";
 import { fmtAmount, fmtDate, fmtPct } from "@/lib/format";
 import { objectAllowed } from "@/lib/config";
@@ -455,7 +456,14 @@ function ObjectDrawerBody({
                     {objectTitle(l.to_id)}
                   </button>
                 ) },
-                { key: "domains", title: "可进入的关联监管", render: (l) => l.domains.map((d) => DOMAIN_META[d].label).join("、") },
+                {
+                  key: "domains",
+                  title: "可进入的关联监管",
+                  render: (l) => {
+                    const domains = visibleSupervisionDomains(l.domains);
+                    return domains.length ? domains.map((d) => DOMAIN_META[d].label).join("、") : "—";
+                  },
+                },
                 { key: "asof", title: "关系有效期", width: "110px", render: (l) => <span className="num text-[12px]">{l.as_of}</span> },
                 { key: "evid", title: "依据", render: (l) => <span className="text-[12px] text-textsub">{l.evidence_ids?.map((e) => evidenceTitle(e)).join("、") || "—"}</span> },
               ]}

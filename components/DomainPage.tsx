@@ -9,7 +9,6 @@ import ScenarioExecutionPanel, { type SubtopicOption } from "@/components/Scenar
 import ObjectDrawer from "@/components/ObjectDrawer";
 import { Button, Card, DataTable, KpiCard, SeverityTag, Tabs, Tag } from "@/components/ui";
 import FilterBar from "@/components/FilterBar";
-import InvestmentKindTabs from "@/components/InvestmentKindTabs";
 import PageHeader from "@/components/PageHeader";
 import { DOMAIN_META, phaseName, seed, templatesByDomain, topicName } from "@/lib/seed";
 import { computeIndicator, indicatorById, type IndicatorDef, type NodeMetric } from "@/lib/metrics";
@@ -19,6 +18,7 @@ import { orgName } from "@/lib/org";
 import { authorizedObjectIds, canDomain, intersectOrgScope, riskVisible } from "@/lib/config";
 import { isOpen, isOverdueRectification, rectificationDueDate, statusLabel } from "@/lib/risks";
 import { riskMatches } from "@/lib/risks";
+import { isRetiredScenarioId } from "@/lib/supervision-scope";
 import { fmtDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/export";
 import { useDemoStore } from "@/lib/store";
@@ -219,7 +219,6 @@ export default function DomainPage({
 
   return (
     <div className="space-y-4">
-      {(domain === "FA" || domain === "EQ") && <InvestmentKindTabs current={domain} />}
       <PageHeader title={meta.label}>
         <FilterBar />
       </PageHeader>
@@ -469,7 +468,7 @@ export default function DomainPage({
                       orgName(r.owner_org_id),
                       r.primary_object_id,
                       r.rule_id,
-                      r.scenario_ids.join("/"),
+                      r.scenario_ids.filter((id) => !isRetiredScenarioId(id)).join("/"),
                       rectificationDueDate(r) ?? "",
                       isOverdueRectification(r, filters.asOf) ? "是" : "否",
                     ]),

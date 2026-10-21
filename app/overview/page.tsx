@@ -12,6 +12,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, DataTable, KpiCard, Modal, Notice } from "@/components/ui";
 import { IconAlert, IconClipboard, IconLayers, IconOverview, DOMAIN_ICONS } from "@/components/icons";
 import { DOMAIN_META, objectTypeLabel, scenarioName, seed } from "@/lib/seed";
+import { isRetiredSupervisionDomain } from "@/lib/supervision-scope";
 import { indicatorById } from "@/lib/metrics";
 import { orgName, orgUnitTypeLabel, orgById, orgFilterCaption, ROOT_ORG_ID } from "@/lib/org";
 import { authorizedObjectIds, authorizedOrgIds, can, canDomain, intersectOrgScope, riskVisible } from "@/lib/config";
@@ -256,7 +257,7 @@ export default function OverviewPage() {
             name="纳管项目数"
             value={projectRows.length}
             unit="个"
-            compare="固定资产、股权投资、工程去重"
+            compare="投资项目与工程项目去重"
             icon={<IconLayers size={20} />}
             scopeLabel={scopeLabel}
             onOpen={() => {
@@ -454,7 +455,7 @@ export default function OverviewPage() {
               title: "涉及领域",
               width: "168px",
               nowrap: true,
-              render: (r) => r.domains.map((d) => DOMAIN_META[d].short).join("、"),
+              render: (r) => r.domains.filter((d) => !isRetiredSupervisionDomain(d)).map((d) => DOMAIN_META[d].short).join("、"),
             },
             {
               key: "act",
@@ -602,8 +603,7 @@ export default function OverviewPage() {
           <div className="mb-3 flex flex-wrap gap-2">
             {[
               ["all", "全部"],
-              ["fixed_asset_project", "固定资产投资"],
-              ["equity_project", "股权投资"],
+              ["fixed_asset_project", "投资项目"],
               ["engineering_project", "工程项目"],
             ].map(([id, label]) => (
               <button

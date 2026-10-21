@@ -166,7 +166,7 @@ export const DOMAIN_META: Record<
   DomainId,
   { id: DomainId; pageId: string; label: string; route: string; short: string }
 > = {
-  FA: { id: "FA", pageId: "P20", label: "固定资产投资管理", route: "/fixed-asset-investment", short: "固定资产" },
+  FA: { id: "FA", pageId: "P20", label: "投资管理", route: "/fixed-asset-investment", short: "投资" },
   EQ: { id: "EQ", pageId: "P10", label: "股权投资管理", route: "/equity-investment", short: "股权" },
   INTL: { id: "INTL", pageId: "P30", label: "国际化业务", route: "/international-business", short: "国际化" },
   CASH: { id: "CASH", pageId: "P40", label: "资金管理", route: "/funds", short: "资金" },
@@ -176,7 +176,7 @@ export const DOMAIN_META: Record<
 
 /**
  * 侧栏业务领域五项：投资管理、资金、产权、国际化、工程。
- * 投资管理直接进入现有固定资产页，股权在页面内切换，不新建汇总页，不合并数据。
+ * 投资管理只保留原固定资产投资页面，不再切换股权投资。
  */
 export const NAV_ITEMS = [
   { id: "P00", label: "综合总览", route: "/overview", domain: null as DomainId | null },

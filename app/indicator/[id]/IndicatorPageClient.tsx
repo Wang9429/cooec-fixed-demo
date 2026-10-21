@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import React from "react";
+import React, { useEffect } from "react";
 import IndicatorDrawer from "@/components/IndicatorDrawer";
 import { Card, Notice } from "@/components/ui";
 import { DOMAIN_META } from "@/lib/seed";
@@ -10,6 +10,7 @@ import { indicatorById } from "@/lib/metrics";
 import { runnableDrawerIndicators } from "@/lib/indicator-scope";
 import { orgName } from "@/lib/org";
 import { useDemoStore } from "@/lib/store";
+import { isRetiredSupervisionDomain } from "@/lib/supervision-scope";
 
 /**
  * P71 指标穿透独立页。直接访问路由时提供同内容，
@@ -21,6 +22,11 @@ export default function IndicatorPageClient() {
   const { filters } = useDemoStore();
   const id = decodeURIComponent(params.id);
   const def = indicatorById(id);
+  const retired = Boolean(def && isRetiredSupervisionDomain(def.domain));
+
+  useEffect(() => {
+    if (retired) router.replace("/fixed-asset-investment");
+  }, [retired, router]);
 
   const scopeLabel = `${orgName(filters.orgId)}${filters.includeChildren ? "（含下级）" : "（仅本级）"}｜${filters.periodStart}~${filters.periodEnd}`;
 
@@ -30,7 +36,7 @@ export default function IndicatorPageClient() {
         <button className="text-[13px] text-brand hover:underline" onClick={() => router.back()}>
           ‹ 返回来源页面
         </button>
-        {def && (
+        {def && !retired && (
           <>
             <span className="text-textsub">/</span>
             <Link href={DOMAIN_META[def.domain].route} className="text-[13px] text-brand hover:underline">
@@ -40,7 +46,9 @@ export default function IndicatorPageClient() {
         )}
       </div>
 
-      {def ? (
+      {retired ? (
+        <p className="text-[14px] text-textsub">正在进入投资管理。</p>
+      ) : def ? (
         <IndicatorDrawer
           open
           onClose={() => router.back()}

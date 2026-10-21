@@ -41,10 +41,7 @@ function breadcrumb(pathname: string): { parent: string; current: string } {
   if (pathname.startsWith("/scenario-library")) return { parent: "系统配置", current: "场景规则库" };
   if (pathname.startsWith("/data-sources")) return { parent: "系统配置", current: "数据与运行" };
   if (pathname.startsWith("/object/")) return { parent: "穿透式监管", current: "对象档案" };
-  if (isInvestmentPath(pathname)) {
-    const current = routeActive(pathname, DOMAIN_META.EQ.route) ? DOMAIN_META.EQ.label : DOMAIN_META.FA.label;
-    return { parent: "投资管理", current };
-  }
+  if (isInvestmentPath(pathname)) return { parent: "穿透式监管", current: "投资管理" };
   const nav = NAV_ITEMS.find((item) => item.id !== INVESTMENT_NAV_ID && routeActive(pathname, item.route));
   return { parent: "穿透式监管", current: nav?.label ?? "综合总览" };
 }
@@ -59,7 +56,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     () => risks.filter((r) => isOpen(r) && riskVisible(user, r)).length,
     [risks, user],
   );
-  const canInvestment = canDomain(user, "FA") || canDomain(user, "EQ");
+  const canInvestment = canDomain(user, "FA");
   const navItems = useMemo(
     () =>
       NAV_ITEMS.filter((item) => {
@@ -88,12 +85,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <ul className="reg-nav">
           {navItems.map((item) => {
             const active = item.id === INVESTMENT_NAV_ID ? isInvestmentPath(pathname) : routeActive(pathname, item.route);
-            const href =
-              item.id === INVESTMENT_NAV_ID
-                ? canDomain(user, "FA")
-                  ? DOMAIN_META.FA.route
-                  : DOMAIN_META.EQ.route
-                : item.route;
+            const href = item.id === INVESTMENT_NAV_ID ? DOMAIN_META.FA.route : item.route;
             const Icon = NAV_ICONS[item.id] ?? NAV_ICONS.P00;
             return (
               <li key={item.id}>

@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import RiskCaseDrawer from "@/components/RiskCaseDrawer";
 import { Button, Card, DataTable, SeverityTag, Tabs, Tag, inputClass, selectClass } from "@/components/ui";
 import { DOMAIN_META } from "@/lib/seed";
+import { isRetiredSupervisionDomain, remainsInSupervisionScope } from "@/lib/supervision-scope";
 import { orgName } from "@/lib/org";
 import {
   isCurrentTaskOverdue,
@@ -51,7 +52,7 @@ export default function WorkbenchPage() {
   const base = useMemo(
     () =>
       snapshotRisksAtAsOf(risks, filters.asOf, actions).filter(
-        (r) => orgIds.has(r.owner_org_id) && riskVisible(user, r),
+        (r) => orgIds.has(r.owner_org_id) && riskVisible(user, r) && remainsInSupervisionScope(r.domains),
       ),
     [risks, actions, filters.asOf, orgIds, user],
   );
@@ -119,7 +120,7 @@ export default function WorkbenchPage() {
                   r.id,
                   r.title,
                   r.primary_object_id,
-                  r.domains.map((d) => DOMAIN_META[d].label).join("/"),
+                  r.domains.filter((d) => !isRetiredSupervisionDomain(d)).map((d) => DOMAIN_META[d].label).join("/"),
                   r.rule_id,
                   statusLabel[r.status],
                   taskTypeLabel[r.current_task_type],
@@ -146,7 +147,9 @@ export default function WorkbenchPage() {
           <input className={`${inputClass} w-[220px]`} placeholder="搜索事项编号、摘要或主对象" value={q} onChange={(e) => setQ(e.target.value)} />
           <select className={`${selectClass} w-[170px]`} value={domain} onChange={(e) => setDomain(e.target.value as never)}>
             <option value="all">全部主/关联领域</option>
-            {Object.values(DOMAIN_META).map((m) => (
+            {Object.values(DOMAIN_META)
+              .filter((m) => !isRetiredSupervisionDomain(m.id))
+              .map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}
               </option>
@@ -200,7 +203,7 @@ export default function WorkbenchPage() {
               key: "domains",
               title: "关联领域",
               width: "150px",
-              render: (r) => r.domains.map((d) => DOMAIN_META[d].short).join("、"),
+              render: (r) => r.domains.filter((d) => !isRetiredSupervisionDomain(d)).map((d) => DOMAIN_META[d].short).join("、"),
             },
             { key: "rule", title: "触发规则", width: "120px", render: (r) => <span className="num text-[12px]">{r.rule_id}</span> },
             { key: "sev", title: "等级", width: "84px", render: (r) => <SeverityTag severity={r.severity} /> },

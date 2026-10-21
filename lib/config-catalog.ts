@@ -3,19 +3,43 @@ import { buildFpCatalogSlice } from "./fp-catalog";
 import { CASH_S039_TOLERANCE_MAX_WAN, CASH_S039_TOLERANCE_MAX_YUAN } from "./fp-tolerance";
 import type { DomainId, RuleEvaluation } from "./types";
 import { canonicalRightsStage, FIRST_BATCH_RUNTIME, MAIN_TOPIC_OVERRIDE, type RuntimeCapability } from "./fp-topics";
+import { isRetiredSupervisionDomain, migrateSupervisionDomainIds } from "./supervision-scope";
 
 const SEED_AS_OF = "2026-06-30";
 
 /** 配置目录精简快照：写入 localStorage，不把规则绑定明细整包持久化。 */
 
 export const DOMAIN_OPTIONS: { id: DomainId; label: string }[] = [
-  { id: "FA", label: "固定资产" },
-  { id: "EQ", label: "股权投资" },
+  { id: "FA", label: "投资管理" },
   { id: "INTL", label: "国际化" },
   { id: "CASH", label: "资金" },
   { id: "RIGHTS", label: "产权" },
   { id: "ENG", label: "工程" },
 ];
+
+export function omitRetiredSupervisionCatalog(catalog: CatalogPersist): CatalogPersist {
+  const retiredSubs = new Set(
+    catalog.subscenarios.filter((s) => isRetiredSupervisionDomain(s.domain)).map((s) => s.id),
+  );
+  return {
+    ...catalog,
+    groups: catalog.groups.filter((g) => !isRetiredSupervisionDomain(g.domain)),
+    subscenarios: catalog.subscenarios.filter((s) => !isRetiredSupervisionDomain(s.domain)),
+    rules: catalog.rules.filter((r) => !retiredSubs.has(r.primary_subscenario_id)),
+    indicators: catalog.indicators.filter((i) => !isRetiredSupervisionDomain(i.domain)),
+    ai: {
+      ...catalog.ai,
+      allowed_domains: catalog.ai.allowed_domains.filter((d) => !isRetiredSupervisionDomain(d)),
+    },
+  };
+}
+
+export function migrateConfigUsers(users: ConfigUser[]): ConfigUser[] {
+  return users.map((user) => ({
+    ...user,
+    domain_ids: migrateSupervisionDomainIds(user.domain_ids as string[]),
+  }));
+}
 
 export const EXECUTION_MODE_OPTIONS = [
   { id: "structured_automatic", label: "自动监测" },
@@ -342,7 +366,7 @@ export function extractCatalog(): CatalogPersist {
   };
   const fp = buildFpCatalogSlice();
   const stamped = stampLegacyTopics(mergeById(subscenarios, fp.subscenarios));
-  return {
+  return omitRetiredSupervisionCatalog({
     schema: 1,
     groups: mergeById(groups, fp.groups),
     subscenarios: stamped,
@@ -351,11 +375,11 @@ export function extractCatalog(): CatalogPersist {
     ai: {
       ...ai,
       tasks: mergeById(ai.tasks, fp.ai.tasks),
-      allowed_domains: fp.ai.allowed_domains,
+      allowed_domains: fp.ai.allowed_domains.filter((d) => !isRetiredSupervisionDomain(d)),
     },
     dataSources: DEFAULT_DATA_SOURCES.map((d) => ({ ...d })),
     runtime_evaluations: [],
-  };
+  });
 }
 
 function stampLegacyTopics(subs: CatalogSubscenario[]): CatalogSubscenario[] {
@@ -415,7 +439,7 @@ export function hydrateCatalog(raw: unknown): CatalogPersist {
   if (!raw || typeof raw !== "object") return base;
   const r = raw as Partial<CatalogPersist>;
   const aiTasks = mergeById(base.ai.tasks, r.ai?.tasks);
-  return {
+  const merged: CatalogPersist = {
     schema: 1,
     groups: mergeById(base.groups, r.groups),
     subscenarios: stampLegacyTopics(
@@ -468,6 +492,7 @@ export function hydrateCatalog(raw: unknown): CatalogPersist {
       ? (r as CatalogPersist).runtime_evaluations
       : [],
   };
+  return omitRetiredSupervisionCatalog(merged);
 }
 
 export function trialPctFromCatalog(catalog: CatalogPersist, fallback: number): number {

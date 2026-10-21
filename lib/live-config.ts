@@ -2,6 +2,7 @@ import type { CatalogPersist, CatalogSubscenario, CatalogRule } from "./config-c
 import { extractCatalog, ruleRuntimeKind } from "./config-catalog";
 import { isExecutableCapability } from "./fp-topics";
 import { setLiveScenarioNames } from "./scenario-names-live";
+import { isRetiredScenarioId } from "./supervision-scope";
 import type { RuleEvaluation } from "./types";
 
 export interface LiveExtraScenario {
@@ -76,7 +77,7 @@ function emptyLive(): LiveState {
     rules: [],
     aiEnabled: true,
     aiTasks: new Set(),
-    aiDomains: new Set(["FA", "EQ", "INTL", "CASH", "RIGHTS", "ENG"]),
+    aiDomains: new Set(["FA", "INTL", "CASH", "RIGHTS", "ENG"]),
     aiExternalConnected: false,
     aiModeDisplay: "",
     runtimeEvaluations: [],
@@ -237,6 +238,7 @@ export function catalogIndicatorMeta(id: string): LiveIndicatorMeta | undefined 
 }
 
 export function catalogIndicatorVisible(id: string): boolean {
+  if (isRetiredScenarioId(id)) return false;
   bootFromCatalog();
   const meta = current.indicators.get(id);
   if (!meta) return true;
@@ -244,6 +246,7 @@ export function catalogIndicatorVisible(id: string): boolean {
 }
 
 export function catalogIndicatorOnHomepage(id: string): boolean {
+  if (isRetiredScenarioId(id)) return false;
   bootFromCatalog();
   const meta = current.indicators.get(id);
   if (!meta) return true;
@@ -252,6 +255,7 @@ export function catalogIndicatorOnHomepage(id: string): boolean {
 
 /** 领域页可展示的指标：首页或领域页位置，且已启用。停用不留空卡。 */
 export function catalogIndicatorOnDomainPage(id: string): boolean {
+  if (isRetiredScenarioId(id)) return false;
   bootFromCatalog();
   const meta = current.indicators.get(id);
   if (!meta) return true;

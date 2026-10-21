@@ -6,6 +6,7 @@ import RiskCaseDrawer from "@/components/RiskCaseDrawer";
 import PageHeader from "@/components/PageHeader";
 import { Button, Card, DataTable, DescList, LinkButton, Modal, Tabs, Tag, inputClass, selectClass } from "@/components/ui";
 import { DOMAIN_META, SUPPLEMENTAL_SCENARIO_LABEL, catalog, coverageRows, phaseName, scenarioName, seed } from "@/lib/seed";
+import { isRetiredScenarioId, isRetiredSupervisionDomain, isRetiredSupervisionRuleId } from "@/lib/supervision-scope";
 import { downloadCsv } from "@/lib/export";
 import { useDemoStore } from "@/lib/store";
 import type { CatalogIndicator, CatalogScenario, MonitoringRuleDefinition } from "@/lib/types";
@@ -36,6 +37,7 @@ export default function ScenarioLibraryPage() {
   const catalogRows = useMemo(
     () =>
       catalog.scenarios.filter((s) => {
+        if (isRetiredSupervisionDomain(s.domain)) return false;
         if (domainFilter !== "all" && s.domain !== domainFilter) return false;
         if (adoptionFilter !== "all" && s.adoption_mode !== adoptionFilter) return false;
         if (q.trim()) {
@@ -50,6 +52,7 @@ export default function ScenarioLibraryPage() {
   const suppRows = useMemo(
     () =>
       supplemental.filter((s) => {
+        if (isRetiredSupervisionDomain(s.domain)) return false;
         if (domainFilter !== "all" && s.domain !== domainFilter) return false;
         if (adoptionFilter !== "all" && adoptionFilter !== SUPPLEMENTAL_SCENARIO_LABEL) return false;
         if (q.trim()) {
@@ -61,7 +64,19 @@ export default function ScenarioLibraryPage() {
     [supplemental, domainFilter, adoptionFilter, q],
   );
 
-  const rules = seed.monitoring_rule_definitions;
+  const retiredScenarioIds = new Set(catalog.scenarios.filter((s) => isRetiredSupervisionDomain(s.domain)).map((s) => s.id));
+  const rules = seed.monitoring_rule_definitions.filter((r) => {
+    if (isRetiredSupervisionRuleId(r.id)) return false;
+    if (r.scenario_ids.length > 0 && r.scenario_ids.every((id) => retiredScenarioIds.has(id) || isRetiredScenarioId(id))) return false;
+    return true;
+  });
+  const indicators = catalog.indicators.filter((i) => !isRetiredSupervisionDomain(i.domain));
+  const domainOptions = Object.values(DOMAIN_META).filter((m) => !isRetiredSupervisionDomain(m.id));
+  const scenarioTotal = catalog.scenarios.filter((s) => !isRetiredSupervisionDomain(s.domain)).length;
+  const supplementalTotal = supplemental.filter((s) => !isRetiredSupervisionDomain(s.domain)).length;
+  const parameterRows = Object.entries(seed.demo_rule_parameters).filter(
+    ([k, v]) => typeof v === "object" && v !== null && !isRetiredSupervisionRuleId(k),
+  );
 
   return (
     <div className="space-y-4">
@@ -73,9 +88,9 @@ export default function ScenarioLibraryPage() {
 
       <Tabs
         tabs={[
-          { id: "scenarios", label: `投资子场景（${catalog.counts.source_scenarios}）` },
-          { id: "supplemental", label: `补充监管场景（${supplemental.length}）` },
-          { id: "indicators", label: `监管指标（${catalog.counts.unique_indicators}）` },
+          { id: "scenarios", label: `投资子场景（${scenarioTotal}）` },
+          { id: "supplemental", label: `补充监管场景（${supplementalTotal}）` },
+          { id: "indicators", label: `监管指标（${indicators.length}）` },
           { id: "rules", label: `监测规则（${rules.length}）` },
           { id: "params", label: "规则参数与边界" },
         ]}
@@ -91,7 +106,7 @@ export default function ScenarioLibraryPage() {
           <div className="w-[160px] max-w-full">
             <select className={selectClass} value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)}>
               <option value="all">全部领域</option>
-              {Object.values(DOMAIN_META).map((m) => (
+              {domainOptions.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label}
                 </option>
@@ -248,7 +263,7 @@ export default function ScenarioLibraryPage() {
       {tab === "indicators" && (
         <Card title="监管指标">
           <DataTable
-            rows={catalog.indicators}
+            rows={indicators}
             rowKey={(i) => i.id}
             pageSize={10}
             compactEmpty
@@ -308,7 +323,9 @@ export default function ScenarioLibraryPage() {
                 width: "150px",
                 render: (r) => (
                   <span className="flex flex-wrap gap-1">
-                    {r.scenario_ids.map((s) => (
+                    {r.scenario_ids
+                      .filter((s) => !retiredScenarioIds.has(s) && !isRetiredScenarioId(s))
+                      .map((s) => (
                       <button key={s} className="num text-brand hover:underline" onClick={() => setScenarioId(s)}>
                         {s}
                       </button>
@@ -343,7 +360,7 @@ export default function ScenarioLibraryPage() {
         <div className="space-y-4">
           <Card title="规则参数">
             <DataTable
-              rows={Object.entries(seed.demo_rule_parameters).filter(([, v]) => typeof v === "object" && v !== null)}
+              rows={parameterRows}
               rowKey={([k]) => k}
               pageSize={10}
               compactEmpty

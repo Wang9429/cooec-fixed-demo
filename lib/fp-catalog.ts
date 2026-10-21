@@ -511,7 +511,7 @@ export function buildFpCatalogSlice(): Pick<
       mode_display: "预置分析（未接真实模型）",
       external_model_connected: false,
       tasks: FP_AI_TASKS,
-      allowed_domains: ["FA", "EQ", "INTL", "CASH", "RIGHTS", "ENG"],
+      allowed_domains: ["FA", "INTL", "CASH", "RIGHTS", "ENG"],
     },
   };
 }

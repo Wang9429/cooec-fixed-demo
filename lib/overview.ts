@@ -15,9 +15,10 @@ import {
   isRectifiedClosedInPeriod,
   riskAtAsOf,
 } from "./risks";
+import { isRetiredSupervisionDomain, isRetiredSupervisionRuleId, remainsInSupervisionScope } from "./supervision-scope";
 import type { CaseAction, DomainId, Organization, RiskCase, RuleEvaluation } from "./types";
 
-export const OVERVIEW_DOMAIN_ORDER: DomainId[] = ["FA", "EQ", "INTL", "CASH", "RIGHTS", "ENG"];
+export const OVERVIEW_DOMAIN_ORDER: DomainId[] = ["FA", "CASH", "RIGHTS", "INTL", "ENG"];
 
 export type OrgMonitorStatus =
   | "no_business"
@@ -121,22 +122,6 @@ export function inScopeProjects(
       p.managed_end,
     );
   }
-  for (const p of seed.equity_projects) {
-    push(
-      {
-        id: p.id,
-        name: p.name,
-        orgId: p.owner_org_id,
-        kind: "equity_project",
-        projectType: p.investment_type,
-        status: p.status ?? p.phase,
-        managedStart: p.managed_start,
-        managedEnd: p.managed_end,
-      },
-      p.managed_start,
-      p.managed_end,
-    );
-  }
   for (const p of seed.engineering_projects) {
     push(
       {
@@ -225,6 +210,7 @@ export function validHitRecords(scope: OverviewScope, domain?: DomainId): HitRec
     if (!orgId || !scope.orgIds.has(orgId)) continue;
     if (!objectAllowedInScope(e.subject_object_id, scope.allowedObjectIds)) continue;
     const d = domainFromRule(e.rule_id);
+    if (isRetiredSupervisionDomain(d) || isRetiredSupervisionRuleId(e.rule_id)) continue;
     if (domain && d && d !== domain) continue;
     if (domain && !d && domain !== "ENG") continue;
     const k = key(e.rule_id, e.subject_object_id);
@@ -252,6 +238,7 @@ export function validHitRecords(scope: OverviewScope, domain?: DomainId): HitRec
     if (row.snapshot_date > scope.asOf) continue;
     if (!scope.orgIds.has(row.owner_org_id)) continue;
     if (!objectAllowedInScope(row.monitoring_object_id, scope.allowedObjectIds)) continue;
+    if (isRetiredSupervisionDomain(row.domain)) continue;
     if (domain && row.domain !== domain) continue;
     for (const ruleId of row.rule_ids ?? []) {
       const k = key(ruleId, row.monitoring_object_id);
@@ -287,6 +274,7 @@ export function scopedRisksAtAsOf(scope: OverviewScope): RiskCase[] {
   for (const r of scope.risks) {
     const snap = riskAtAsOf(r, scope.asOf, scope.actions);
     if (!snap) continue;
+    if (!remainsInSupervisionScope(snap.domains)) continue;
     if (!scope.orgIds.has(snap.owner_org_id)) continue;
     if (!objectAllowedInScope(snap.primary_object_id, scope.allowedObjectIds)) continue;
     out.push(snap);

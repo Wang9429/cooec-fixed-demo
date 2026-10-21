@@ -9,6 +9,7 @@ import {
   extractCatalog,
   hydrateCatalog,
   isTrialRulePublished,
+  migrateConfigUsers,
   trialPctFromCatalog,
   type CatalogPersist,
 } from "./config-catalog";
@@ -156,7 +157,7 @@ function initialState(): PersistedState {
 function initialConfig(): ConfigPersist {
   const catalog = extractCatalog();
   return {
-    users: JSON.parse(JSON.stringify(config.users)) as ConfigUser[],
+    users: migrateConfigUsers(JSON.parse(JSON.stringify(config.users)) as ConfigUser[]),
     eacTrialPct: trialPctFromCatalog(catalog, config.rule_editor.new_rule_example.parameters.deviation_gt_pct),
     publishedTrial: false,
     catalog,
@@ -342,13 +343,19 @@ function readStorage() {
           trial.version_id = published.version;
         }
         const next: ConfigPersist = {
-          users: parsed.users,
+          users: migrateConfigUsers(parsed.users),
           eacTrialPct: trialPctFromCatalog(catalog, parsed.eacTrialPct ?? 10),
           publishedTrial: isTrialRulePublished(catalog) || Boolean(parsed.publishedTrial),
           catalog,
         };
         syncLiveFromCatalog(catalog);
         update({ config: next });
+        try {
+          const serialized = JSON.stringify(next);
+          if (serialized !== cfg) window.localStorage.setItem(CONFIG_KEY, serialized);
+        } catch {
+          update({ saveError: "配置迁移后保存失败，本次刷新仍按已迁移结果展示。" });
+        }
       }
     }
   } catch {
@@ -575,7 +582,7 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       configUsers: snap.config.users,
       saveConfigUsers: (next) => {
         if (!can(user, "config.users.edit")) return;
-        writeConfig({ ...snapshot.config, users: next });
+        writeConfig({ ...snapshot.config, users: migrateConfigUsers(next) });
       },
       catalog: snap.config.catalog,
       saveCatalog: (next, action) => {

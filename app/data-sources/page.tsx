@@ -16,6 +16,7 @@ import {
   textareaClass,
 } from "@/components/ui";
 import { AS_OF, DOMAIN_META, coverageRows, monitoringStatusLabel, seed } from "@/lib/seed";
+import { isRetiredSupervisionDomain } from "@/lib/supervision-scope";
 import { useDemoStore } from "@/lib/store";
 import { can } from "@/lib/config";
 
@@ -77,7 +78,9 @@ export default function DataSourcesPage() {
   }, []);
 
   const domainBreakdown = useMemo(() => {
-    return Object.values(DOMAIN_META).map((meta) => {
+    return Object.values(DOMAIN_META)
+      .filter((meta) => !isRetiredSupervisionDomain(meta.id))
+      .map((meta) => {
       const rows = coverageRows.filter((r) => r.domain === meta.id);
       const required = rows.filter((r) => r.required && r.status !== "not_applicable" && r.status !== "reference_only");
       const evaluated = required.filter((r) => r.status === "evaluated_hit" || r.status === "evaluated_clear");
@@ -179,8 +182,7 @@ export default function DataSourcesPage() {
                 { label: "默认统计期间", value: <span className="num">2026-01-01 ~ 2026-06-30</span> },
                 { label: "组织管理节点", value: <span className="num">{seed.organizations.length} 个</span> },
                 { label: "法律主体", value: <span className="num">{seed.legal_entities.length} 个</span> },
-                { label: "固定资产投资项目", value: <span className="num">{seed.fixed_asset_projects.length} 个</span> },
-                { label: "股权投资项目", value: <span className="num">{seed.equity_projects.length} 个</span> },
+                { label: "投资项目", value: <span className="num">{seed.fixed_asset_projects.length} 个</span> },
                 { label: "工程项目", value: <span className="num">{seed.engineering_projects.length} 个</span> },
                 { label: "已转固资产", value: <span className="num">{seed.assets.length} 项</span> },
                 { label: "银行账户", value: <span className="num">{seed.accounts.length} 个</span> },
@@ -294,7 +296,7 @@ export default function DataSourcesPage() {
                 { label: "规则参数版本", value: String(seed.demo_rule_parameters.version) },
                 { label: "业务截至日", value: <span className="num">{AS_OF}</span> },
                 { label: "场景目录版本", value: `investment_catalog ${seed.version}` },
-                { label: "阶段模板版本", value: "V1.2 命名（FA/EQ/ENG/PR-*-V12）" },
+                { label: "阶段模板版本", value: "V1.2 命名" },
                 { label: "当前会话状态", value: dirty ? "含本地办理修改" : "与种子一致" },
               ]}
             />
@@ -309,8 +311,7 @@ export default function DataSourcesPage() {
                 { k: "95%/100%、延期60天、±5% 等阈值", v: "按适配对照配置；标注底稿参数及待确认项", who: "固定资产投资管理" },
                 { k: "设备低利用率阈值及连续周期", v: "种子以 50% 与人工确认作演示；不宣称通用于所有船舶设备", who: "资产及设备管理" },
                 { k: "EAC 构成、含税口径与抵销", v: "明确示例构成与管理范围，重复成本排除", who: "投资/工程及财务" },
-                { k: "股权收益、平均余额与减值率分母", v: "会计收益与现金分开；减值前余额与净值分别保存", who: "财务及股权投资管理" },
-                { k: "后评价起算日期及应评价对象", v: "固定资产用实际投产/可使用状态；股权按批准交易类型起算事件", who: "投资管理" },
+                { k: "后评价起算日期及应评价对象", v: "投资项目按实际投产或达到可使用状态起算", who: "投资管理" },
                 { k: "事件来源、钢材规格、船型航线与转嫁条款", v: "使用明确标识的模拟事件与价格；真实历史事件仅作日期锚点", who: "国际业务、采购、物流及工程" },
                 { k: "工作日、数据刷新与接口字段", v: "演示日历与批次；拟来源不显示为实际已接入", who: "业务部门及信息化" },
                 { k: "核查责任、整改复核分工与办理期限", v: "虚构角色、本地状态，不冒充生产审批", who: "监管牵头及各领域管理" },

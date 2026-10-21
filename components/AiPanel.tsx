@@ -17,8 +17,7 @@ import type { DomainId } from "@/lib/types";
 function domainFromPath(pathname: string): DomainId | "OVERVIEW" | null {
   if (pathname.startsWith("/funds")) return "CASH";
   if (pathname.startsWith("/property-rights")) return "RIGHTS";
-  if (pathname.startsWith("/fixed-asset-investment")) return "FA";
-  if (pathname.startsWith("/equity-investment")) return "EQ";
+  if (pathname.startsWith("/fixed-asset-investment") || pathname.startsWith("/equity-investment")) return "FA";
   if (pathname.startsWith("/international-business")) return "INTL";
   if (pathname.startsWith("/engineering-projects")) return "ENG";
   if (pathname.startsWith("/overview")) return "OVERVIEW";
@@ -29,7 +28,6 @@ const DOMAIN_TASKS: Record<string, string[]> = {
   CASH: ["CASH-EXPLAIN-PL", "CASH-PAY-EVIDENCE", "CASH-DEBT-LIQ", "CASH-SME-CLUE", "explain_hit"],
   RIGHTS: ["PTY-EQUITY-CHANGE", "PTY-SOURCE-DIFF", "PTY-TRADE-DOCS", "PTY-GOVERNANCE"],
   FA: ["explain_metric", "compare_materials"],
-  EQ: ["explain_metric"],
   INTL: ["suggest_check"],
   ENG: ["suggest_check"],
   OVERVIEW: ["explain_metric", "explain_hit", "compare_materials", "suggest_check"],
