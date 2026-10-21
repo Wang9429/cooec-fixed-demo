@@ -27,6 +27,7 @@ import {
   completedRectificationCases,
   hitOrgMetric,
   hitOwnerOrgIds,
+  hitRuleIds,
   inScopeProjectCount,
   managedOrganizations,
   managedOrgCount,
@@ -59,7 +60,11 @@ import { CASH2_BS_IDS, CASH2_LIQ_IDS, CASH2_PROFIT_IDS, COVERAGE_REPRESENTATIVE,
 import { CATEGORY_LABEL, computeTrendPoints, eligibleTrendPoints, trendSpecOf } from "../lib/fp-trend";
 import { CASH_OFFICIAL_PRIMARY_IDS, RIGHTS_OFFICIAL_PRIMARY_IDS, coveragePrimaries, officialDirectory, officialSubIds, scopedDirectory } from "../lib/fp-directory";
 import { scenarioAdoption, scenarioSourceLabel, SUPPLEMENTAL_SCENARIO_LABEL } from "../lib/seed";
-import { migrateSupervisionDomainIds, remainsInSupervisionScope } from "../lib/supervision-scope";
+import {
+  caseRemainsInSupervisionScope,
+  isEquityInvestmentOnlyCase,
+  migrateSupervisionDomainIds,
+} from "../lib/supervision-scope";
 
 const PERIOD_START = "2026-01-01";
 const PERIOD_END = AS_OF;
@@ -419,8 +424,9 @@ check(
   false,
 );
 check("配置领域不再提供股权投资管理", DOMAIN_OPTIONS.some((d) => d.id === "EQ"), false);
-check("仅有股权投资权限时迁入投资管理", migrateSupervisionDomainIds(["EQ"]).join(","), "FA");
-check("已有投资管理权限不重复添加", migrateSupervisionDomainIds(["FA", "EQ"]).join(","), "FA");
+check("仅有股权投资权限不转为投资管理权限", migrateSupervisionDomainIds(["EQ"]).join(","), "");
+check("已有投资管理权限只去掉股权投资", migrateSupervisionDomainIds(["FA", "EQ"]).join(","), "FA");
+check("股权投资与资金权限只保留资金", migrateSupervisionDomainIds(["EQ", "CASH"]).join(","), "CASH");
 check("固定资产完成额与执行率同属FA-I06", Boolean(faCard && faCard.metrics.length === 2 && faCard.metrics.every((m) => m.indicatorId === "FA-I06")), true);
 check("固定资产主指标为投资计划执行率", faCard?.metrics[0]?.label, "投资计划执行率");
 check("固定资产辅助字段为投资完成额", faCard?.metrics[1]?.label, "投资完成额");
@@ -456,21 +462,20 @@ check("本期完成整改仍为关闭", completedRectificationCases(overviewScop
 check("原R01–R09仍在种子中", ["R01", "R02", "R03", "R04", "R05", "R06", "R07", "R08", "R09"].every((id) => seed.risk_cases.some((r) => r.id === id)), true);
 
 const hqSnaps = snapshotRisksAtAsOf(seed.risk_cases, AS_OF, seed.case_actions).filter((r) => HQ.has(r.owner_org_id));
-const stageHq = rectificationStageCensus(hqSnaps.filter((r) => remainsInSupervisionScope(r.domains)));
+const stageHq = rectificationStageCensus(hqSnaps.filter((r) => caseRemainsInSupervisionScope(r)));
 check(
   "股权投资专属未关闭事项退出总览",
-  hqSnaps.filter((r) => isOpen(r) && !remainsInSupervisionScope(r.domains)).every((r) => !openRect.some((x) => x.id === r.id)),
+  hqSnaps.filter((r) => isOpen(r) && !caseRemainsInSupervisionScope(r)).every((r) => !openRect.some((x) => x.id === r.id)),
   true,
 );
+check("R04规则与场景均属股权投资", isEquityInvestmentOnlyCase(seed.risk_cases.find((r) => r.id === "R04")!), true);
+check("R04退出总览未关闭整改", openRect.some((r) => r.id === "R04"), false);
+check("EQ-R11-01退出命中规则", hitRuleIds(overviewScopeHq).includes("EQ-R11-01"), false);
+check("EQ-X01-R01退出命中规则", hitRuleIds(overviewScopeHq).includes("EQ-X01-R01"), false);
 check(
-  "仍关联保留领域且已进入整改的共享事项留在总览",
+  "规则仍属保留领域且已进入整改的事项留在总览",
   hqSnaps
-    .filter(
-      (r) =>
-        remainsInSupervisionScope(r.domains) &&
-        r.domains.includes("EQ") &&
-        (r.status === "rectifying" || r.status === "pending_verification"),
-    )
+    .filter((r) => caseRemainsInSupervisionScope(r) && (r.status === "rectifying" || r.status === "pending_verification"))
     .every((r) => openRect.some((x) => x.id === r.id)),
   true,
 );

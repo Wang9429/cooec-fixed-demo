@@ -9,6 +9,7 @@ import {
 } from "./risks";
 import type { DomainId, MonitoringRow, RiskCase } from "./types";
 import { canonicalRightsStage, isOfficialFpSub, scenarioFitsBehavior } from "./fp-topics";
+import { isEquityInvestmentOnlyCase, isRetiredScenarioId, isRetiredSupervisionDomain } from "./supervision-scope";
 
 export interface ScopeFilter {
   domain: DomainId;
@@ -46,6 +47,7 @@ export function rowInScope(row: MonitoringRow, f: ScopeFilter): boolean {
   // 未确认适用性的覆盖规划候选不进入业务清单与应评估分母；传入 scenarioId 也不能重新纳入。
   if (isCoverageCandidate(row)) return false;
   if (row.domain !== f.domain) return false;
+  if (isRetiredScenarioId(row.scenario_id) && !isRetiredSupervisionDomain(f.domain)) return false;
   if (!f.orgScope.has(row.owner_org_id)) return false;
   if (row.window_end < f.periodStart || row.window_end > f.periodEnd) return false;
   if (row.snapshot_date > f.asOf) return false;
@@ -143,6 +145,7 @@ export function computeFiveCounts(f: ScopeFilter, risks: RiskCase[]): FiveCounts
   for (const r of risks) {
     if (f.scenarioId && !r.scenario_ids.includes(f.scenarioId)) continue;
     if (f.behaviorId && !r.scenario_ids.some((sid) => scenarioFitsBehavior(sid, f.behaviorId))) continue;
+    if (!isRetiredSupervisionDomain(f.domain) && isEquityInvestmentOnlyCase(r)) continue;
     if (riskMatches(r, linkFilter)) candidates.add(r.id);
   }
 
@@ -155,6 +158,7 @@ export function computeFiveCounts(f: ScopeFilter, risks: RiskCase[]): FiveCounts
     const r = byId.get(id);
     if (!r) continue;
     if (!f.orgScope.has(r.owner_org_id)) continue;
+    if (!isRetiredSupervisionDomain(f.domain) && isEquityInvestmentOnlyCase(r)) continue;
     if (f.allowedObjectIds !== undefined && f.allowedObjectIds !== null && !f.allowedObjectIds.includes(r.primary_object_id)) continue;
     if (f.scenarioId && !r.scenario_ids.includes(f.scenarioId)) continue;
     if (isOpen(r)) {
@@ -202,6 +206,7 @@ export function openCountForPhase(
   let maxSeverity: "red" | "yellow" | null = null;
   for (const r of risks) {
     if (!isOpen(r)) continue;
+    if (!isRetiredSupervisionDomain(domain) && isEquityInvestmentOnlyCase(r)) continue;
     if (!riskMatches(r, { domain, orgScope, phaseId })) continue;
     ids.push(r.id);
     if (r.severity === "red") maxSeverity = "red";
@@ -220,6 +225,7 @@ export function openCountForTopic(
   let maxSeverity: "red" | "yellow" | null = null;
   for (const r of risks) {
     if (!isOpen(r)) continue;
+    if (!isRetiredSupervisionDomain(domain) && isEquityInvestmentOnlyCase(r)) continue;
     if (!riskMatches(r, { domain, orgScope, topicId })) continue;
     ids.push(r.id);
     if (r.severity === "red") maxSeverity = "red";
@@ -239,6 +245,7 @@ export function openCountForDomain(
   let yellow = 0;
   for (const r of risks) {
     if (!isOpen(r)) continue;
+    if (!isRetiredSupervisionDomain(domain) && isEquityInvestmentOnlyCase(r)) continue;
     if (!riskMatches(r, { domain, orgScope })) continue;
     ids.push(r.id);
     if (r.severity === "red") red += 1;
@@ -279,6 +286,7 @@ export function configuredScenarios(domain: DomainId, phaseId?: string | null, t
   const set = new Set<string>();
   for (const row of coverageRows) {
     if (row.domain !== domain) continue;
+    if (isRetiredScenarioId(row.scenario_id)) continue;
     if (phaseId && row.phase_id !== phaseId) continue;
     if (!scenarioBelongsToTopic(row.scenario_id, topicId, row.topic_id)) continue;
     if (!isScenarioMonitoringActive(row.scenario_id)) continue;

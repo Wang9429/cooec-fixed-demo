@@ -15,7 +15,12 @@ import {
   isRectifiedClosedInPeriod,
   riskAtAsOf,
 } from "./risks";
-import { isRetiredSupervisionDomain, isRetiredSupervisionRuleId, remainsInSupervisionScope } from "./supervision-scope";
+import {
+  caseRemainsInSupervisionScope,
+  isRetiredScenarioId,
+  isRetiredSupervisionDomain,
+  isRetiredSupervisionRuleId,
+} from "./supervision-scope";
 import type { CaseAction, DomainId, Organization, RiskCase, RuleEvaluation } from "./types";
 
 export const OVERVIEW_DOMAIN_ORDER: DomainId[] = ["FA", "CASH", "RIGHTS", "INTL", "ENG"];
@@ -241,6 +246,7 @@ export function validHitRecords(scope: OverviewScope, domain?: DomainId): HitRec
     if (isRetiredSupervisionDomain(row.domain)) continue;
     if (domain && row.domain !== domain) continue;
     for (const ruleId of row.rule_ids ?? []) {
+      if (isRetiredSupervisionRuleId(ruleId)) continue;
       const k = key(ruleId, row.monitoring_object_id);
       if (excluded.has(k) || map.has(k)) continue;
       map.set(k, {
@@ -274,7 +280,7 @@ export function scopedRisksAtAsOf(scope: OverviewScope): RiskCase[] {
   for (const r of scope.risks) {
     const snap = riskAtAsOf(r, scope.asOf, scope.actions);
     if (!snap) continue;
-    if (!remainsInSupervisionScope(snap.domains)) continue;
+    if (!caseRemainsInSupervisionScope(snap)) continue;
     if (!scope.orgIds.has(snap.owner_org_id)) continue;
     if (!objectAllowedInScope(snap.primary_object_id, scope.allowedObjectIds)) continue;
     out.push(snap);
@@ -335,6 +341,7 @@ export function applicableMonitorExecutions(
     if (row.window_end < scope.periodStart || row.window_end > scope.periodEnd) return false;
     if (row.snapshot_date > scope.asOf) return false;
     if (!objectAllowedInScope(row.monitoring_object_id, scope.allowedObjectIds)) return false;
+    if (isRetiredSupervisionDomain(row.domain) || isRetiredScenarioId(row.scenario_id)) return false;
     if (domain && row.domain !== domain) return false;
     return true;
   });
@@ -342,7 +349,9 @@ export function applicableMonitorExecutions(
     if (!evalInWindow(e, scope)) return false;
     const orgId = ownerOfObject(e.subject_object_id);
     if (!orgId || !orgIds.has(orgId) || !objectAllowedInScope(e.subject_object_id, scope.allowedObjectIds)) return false;
-    return domainMatches(domainFromRule(e.rule_id), domain);
+    const d = domainFromRule(e.rule_id);
+    if (isRetiredSupervisionDomain(d) || isRetiredSupervisionRuleId(e.rule_id)) return false;
+    return domainMatches(d, domain);
   });
   return {
     coverageEvaluated: rows.filter((r) => r.status === "evaluated_hit" || r.status === "evaluated_clear").length,
@@ -358,6 +367,7 @@ export function orgMonitorStatus(orgIds: Set<string>, scope: OverviewScope, doma
     if (row.window_end < scope.periodStart || row.window_end > scope.periodEnd) return false;
     if (row.snapshot_date > scope.asOf) return false;
     if (!objectAllowedInScope(row.monitoring_object_id, scope.allowedObjectIds)) return false;
+    if (isRetiredSupervisionDomain(row.domain) || isRetiredScenarioId(row.scenario_id)) return false;
     if (domain && row.domain !== domain) return false;
     return true;
   });
@@ -371,7 +381,9 @@ export function orgMonitorStatus(orgIds: Set<string>, scope: OverviewScope, doma
     if (!evalInWindow(e, scope)) return false;
     const orgId = ownerOfObject(e.subject_object_id);
     if (!orgId || !orgIds.has(orgId) || !objectAllowedInScope(e.subject_object_id, scope.allowedObjectIds)) return false;
-    return domainMatches(domainFromRule(e.rule_id), domain);
+    const d = domainFromRule(e.rule_id);
+    if (isRetiredSupervisionDomain(d) || isRetiredSupervisionRuleId(e.rule_id)) return false;
+    return domainMatches(d, domain);
   });
   if (evaluated.length === 0 && evals.length === 0) {
     const insufficient = actual.filter((r) => r.status === "data_insufficient");

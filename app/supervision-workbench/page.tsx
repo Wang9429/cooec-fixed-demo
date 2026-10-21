@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import RiskCaseDrawer from "@/components/RiskCaseDrawer";
 import { Button, Card, DataTable, SeverityTag, Tabs, Tag, inputClass, selectClass } from "@/components/ui";
 import { DOMAIN_META } from "@/lib/seed";
-import { isRetiredSupervisionDomain, remainsInSupervisionScope } from "@/lib/supervision-scope";
+import { caseRemainsInSupervisionScope, isRetiredSupervisionDomain } from "@/lib/supervision-scope";
 import { orgName } from "@/lib/org";
 import {
   isCurrentTaskOverdue,
@@ -52,7 +52,7 @@ export default function WorkbenchPage() {
   const base = useMemo(
     () =>
       snapshotRisksAtAsOf(risks, filters.asOf, actions).filter(
-        (r) => orgIds.has(r.owner_org_id) && riskVisible(user, r) && remainsInSupervisionScope(r.domains),
+        (r) => orgIds.has(r.owner_org_id) && riskVisible(user, r) && caseRemainsInSupervisionScope(r),
       ),
     [risks, actions, filters.asOf, orgIds, user],
   );

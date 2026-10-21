@@ -1,6 +1,6 @@
 import configJson from "@/data/configuration_seed.json";
 import { descendantOrgIds, orgScope } from "./org";
-import { isRetiredSupervisionDomain, remainsInSupervisionScope } from "./supervision-scope";
+import { caseRemainsInSupervisionScope, isRetiredSupervisionDomain } from "./supervision-scope";
 import type { DomainId } from "./types";
 
 /** V1.6 配置种子：与业务种子分开装载，供权限、配置页、覆盖迁移与 AI 使用。 */
@@ -195,10 +195,16 @@ export function canDomain(user: ConfigUser | undefined, domain: DomainId | null)
 
 export function riskVisible(
   user: ConfigUser | undefined,
-  r: { owner_org_id: string; primary_object_id: string; domains: string[] },
+  r: {
+    owner_org_id: string;
+    primary_object_id: string;
+    domains: string[];
+    rule_id?: string | null;
+    scenario_ids?: readonly string[] | null;
+  },
 ): boolean {
   if (!can(user, "business.read")) return false;
-  if (!remainsInSupervisionScope(r.domains)) return false;
+  if (!caseRemainsInSupervisionScope(r)) return false;
   if (!objectAllowed(user, r.owner_org_id, r.primary_object_id)) return false;
   if (user?.domain_ids.length && !r.domains.some((d) => (user.domain_ids as string[]).includes(d) && !isRetiredSupervisionDomain(d))) return false;
   return true;
