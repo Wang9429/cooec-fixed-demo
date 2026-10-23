@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import ChevronFlow, { type ChevronItem } from "@/components/ChevronFlow";
+import LifecycleChain from "@/components/LifecycleChain";
 import IndicatorDrawer, { formatKpiCaption, formatMetricParts } from "@/components/IndicatorDrawer";
 import RiskCaseDrawer from "@/components/RiskCaseDrawer";
 import ScenarioDrawer from "@/components/ScenarioDrawer";
@@ -216,6 +217,62 @@ export default function DomainPage({
     ...tabs.map((t) => ({ id: t.id, label: t.label })),
     { id: "cases", label: `监管事项（${domainRisks.filter(isOpen).length}）` },
   ];
+  const lifecycleHome = domain === "FA" && flowMode === "phases";
+  const shownKpiDefs = lifecycleHome
+    ? kpiDefs
+        .filter((def) => def.id !== "FA-CNT-WATCH-HIT" && def.id !== "FA-OPEN")
+        .sort((a, b) => {
+          const order = ["FA-CNT-PROJECT", "FA-I06", "FA-I07", "FA-CNT-OVERBUDGET", "FA-I14"];
+          const ia = order.indexOf(a.id);
+          const ib = order.indexOf(b.id);
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        })
+    : kpiDefs;
+
+  const focusList = (
+    <Card
+      title="本期重点关注"
+      right={
+        <button
+          className="text-[13px] text-brand hover:underline"
+          onClick={() => {
+            setTab("cases");
+            setRiskFilter("open");
+          }}
+        >
+          查看事项清单 ›
+        </button>
+      }
+    >
+      {highlights.length === 0 ? (
+        <p className="text-[13px] text-textsub">当前组织范围内没有未关闭事项。</p>
+      ) : (
+        <ul className="space-y-2">
+          {highlights.map((r) => (
+            <li key={r.id}>
+              <button
+                type="button"
+                onClick={() => setRiskId(r.id)}
+                className="w-full flex items-start gap-3 px-3 py-2.5 rounded-[6px] border border-line bg-surface hover:bg-tint transition-colors duration-150 text-left"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-2">
+                    <span className="num text-[12px] text-textsub shrink-0 mt-0.5">{r.primary_object_id}</span>
+                    <span className="text-[13px] text-textmain leading-5 break-words">{r.title}</span>
+                  </div>
+                </div>
+                <div className="shrink-0 flex items-center gap-2 flex-wrap justify-end max-w-[46%]">
+                  <SeverityTag severity={r.severity} />
+                  {isOverdueRectification(r, filters.asOf) && <Tag tone="red">整改逾期</Tag>}
+                  <span className="text-[12px] text-textsub whitespace-nowrap">{statusLabel[r.status]}</span>
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
 
   return (
     <div className="space-y-4">
@@ -228,7 +285,7 @@ export default function DomainPage({
       {tab === "overview" && (
         <div className="space-y-4">
           <div className="reg-kpis-domain">
-            {kpiDefs.map((def) => {
+            {shownKpiDefs.map((def) => {
               const m = computeIndicator(def, orgIds, ctx);
               const parts = formatMetricParts(def, m);
               const caption = formatKpiCaption(m, def);
@@ -272,7 +329,18 @@ export default function DomainPage({
             })}
           </div>
 
-          {flowMode === "phases" && template && (
+          {lifecycleHome && template && (
+            <LifecycleChain
+              items={chevronItems}
+              value={phaseId}
+              onChange={(id) => {
+                setPhaseId(id);
+                setSubtopicId(null);
+              }}
+            />
+          )}
+
+          {!lifecycleHome && flowMode === "phases" && template && (
             <Card
               id="business-flow"
               title="业务流程监管"
@@ -362,48 +430,7 @@ export default function DomainPage({
             </Card>
           )}
 
-          <Card
-            title="本期重点关注"
-            right={
-              <button
-                className="text-[13px] text-brand hover:underline"
-                onClick={() => {
-                  setTab("cases");
-                  setRiskFilter("open");
-                }}
-              >
-                查看事项清单 ›
-              </button>
-            }
-          >
-            {highlights.length === 0 ? (
-              <p className="text-[13px] text-textsub">当前组织范围内没有未关闭事项。</p>
-            ) : (
-              <ul className="space-y-2">
-                {highlights.map((r) => (
-                  <li key={r.id}>
-                    <button
-                      type="button"
-                      onClick={() => setRiskId(r.id)}
-                      className="w-full flex items-start gap-3 px-3 py-2.5 rounded-[6px] border border-line bg-surface hover:bg-tint transition-colors duration-150 text-left"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start gap-2">
-                          <span className="num text-[12px] text-textsub shrink-0 mt-0.5">{r.primary_object_id}</span>
-                          <span className="text-[13px] text-textmain leading-5 break-words">{r.title}</span>
-                        </div>
-                      </div>
-                      <div className="shrink-0 flex items-center gap-2 flex-wrap justify-end max-w-[46%]">
-                        <SeverityTag severity={r.severity} />
-                        {isOverdueRectification(r, filters.asOf) && <Tag tone="red">整改逾期</Tag>}
-                        <span className="text-[12px] text-textsub whitespace-nowrap">{statusLabel[r.status]}</span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+          {!lifecycleHome && focusList}
 
           <ScenarioExecutionPanel
             domain={domain}
@@ -421,15 +448,18 @@ export default function DomainPage({
               setScenarioSourceOpen(Boolean(source));
               setScenarioId(id);
             }}
+            expandRules={lifecycleHome}
           />
 
-          {ledger?.(helpers)}
+          {!lifecycleHome && ledger?.(helpers)}
         </div>
       )}
 
       {tabs.map((t) => (tab === t.id ? <div key={t.id}>{t.render(helpers)}</div> : null))}
 
       {tab === "cases" && (
+        <div className="space-y-4">
+        {lifecycleHome && focusList}
         <Card
           title="监管事项"
           right={
@@ -526,6 +556,7 @@ export default function DomainPage({
             ]}
           />
         </Card>
+        </div>
       )}
 
       <IndicatorDrawer

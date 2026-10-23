@@ -21,7 +21,7 @@ import {
   type FiveCounts,
   type ScopeFilter,
 } from "@/lib/monitoring";
-import { isScenarioMonitoringActive, liveSub, hasEffectiveExecutableRule } from "@/lib/live-config";
+import { isScenarioMonitoringActive, liveRule, liveRules, liveSub, hasEffectiveExecutableRule } from "@/lib/live-config";
 import {
   objectTypeLabel,
   phaseName,
@@ -80,6 +80,83 @@ interface ScenarioRow {
   hitRuleCount: number;
 }
 
+interface RuleLine {
+  id: string;
+  name: string;
+  statusLabel: string;
+  statusTone: "red" | "amber" | "green" | "neutral";
+  required: number | null;
+  evaluated: number | null;
+  hitObjects: { objectId: string; objectType: string }[];
+  openCases: RiskCase[];
+}
+
+function ruleLinesFor(row: ScenarioRow, openCases: RiskCase[]): RuleLine[] {
+  const ids = new Set<string>();
+  for (const rule of liveRules()) {
+    if (rule.primary_subscenario_id === row.id) ids.add(rule.id);
+  }
+  for (const record of row.rows) {
+    for (const id of record.rule_ids) ids.add(id);
+  }
+  return [...ids].sort().map((id) => {
+    const meta = liveRule(id);
+    const related = row.rows.filter((record) => record.rule_ids.includes(id));
+    const statuses = new Set(related.map((record) => record.status));
+    let statusLabel = "未执行";
+    let statusTone: RuleLine["statusTone"] = "neutral";
+    if (related.length === 0) {
+      if (row.statusLabelText.includes("未具备") || row.statusLabelText.includes("不具备")) {
+        statusLabel = "不具备运行条件";
+      } else if (row.statusLabelText === "未启用" || row.statusLabelText === "未开展监测" || row.statusLabelText.startsWith("未评估")) {
+        statusLabel = row.statusLabelText.startsWith("未评估") ? "未执行" : row.statusLabelText;
+      }
+    } else if (statuses.has("evaluated_hit")) {
+      statusLabel = "命中";
+      statusTone = "red";
+    } else if ([...statuses].every((status) => status === "evaluated_clear")) {
+      statusLabel = "未命中";
+      statusTone = "green";
+    } else if (statuses.has("data_insufficient")) {
+      statusLabel = "不具备运行条件";
+      statusTone = "amber";
+    } else if ([...statuses].every((status) => status === "not_applicable")) {
+      statusLabel = "不适用";
+    } else if (statuses.has("not_due")) {
+      statusLabel = "尚未到核查时点";
+    } else if (statuses.has("reference_only")) {
+      statusLabel = "待专业核查";
+      statusTone = "amber";
+    } else if (statuses.has("evaluated_clear")) {
+      statusLabel = "未命中";
+      statusTone = "green";
+    }
+    const unique = (records: MonitoringRow[]) => {
+      const map = new Map<string, { objectId: string; objectType: string }>();
+      for (const record of records) {
+        map.set(record.monitoring_object_id, { objectId: record.monitoring_object_id, objectType: record.object_type });
+      }
+      return [...map.values()];
+    };
+    const required = related.length
+      ? unique(related.filter((record) => record.required && record.status !== "not_applicable" && record.status !== "reference_only")).length
+      : null;
+    const evaluated = related.length
+      ? unique(related.filter((record) => record.status === "evaluated_hit" || record.status === "evaluated_clear")).length
+      : null;
+    return {
+      id,
+      name: meta?.name ?? id,
+      statusLabel,
+      statusTone,
+      required,
+      evaluated,
+      hitObjects: unique(related.filter((record) => record.status === "evaluated_hit")),
+      openCases: openCases.filter((item) => item.rule_id === id),
+    };
+  });
+}
+
 export interface TopicChipOption {
   id: string;
   label: string;
@@ -108,6 +185,7 @@ export default function ScenarioExecutionPanel({
   allTopicLabel,
   toolbarExtra,
   behaviorId,
+  expandRules,
 }: {
   domain: DomainId;
   phaseId?: string | null;
@@ -131,6 +209,8 @@ export default function ScenarioExecutionPanel({
   allTopicLabel?: string;
   toolbarExtra?: React.ReactNode;
   behaviorId?: string | null;
+  /** 投资管理总览展开到规则、命中对象和未关闭事项，不影响其他领域。 */
+  expandRules?: boolean;
 }) {
   const { filters, risks, actions, canAct, catalog } = useDemoStore();
   const [detail, setDetail] = useState<{ kind: DetailKind; scenarioId: string | null } | null>(null);
@@ -382,10 +462,30 @@ export default function ScenarioExecutionPanel({
     filters.asOf,
   ]);
 
+  const scenarioRef = React.useRef(visibleScenarioRows);
+  scenarioRef.current = visibleScenarioRows;
   React.useEffect(() => {
     setDetail(null);
-    setOpenRowId(null);
-  }, [topicId, phaseId, behaviorId, directoryDomain]);
+    if (!expandRules || !phaseId) {
+      setOpenRowId(null);
+      return;
+    }
+    const hit = scenarioRef.current.find(
+      (row) => row.hitRuleCount > 0 || row.counts.hitObjects.length > 0 || row.counts.openRiskIds.length > 0,
+    );
+    setOpenRowId(hit?.id ?? null);
+  }, [topicId, phaseId, behaviorId, directoryDomain, subtopicId, expandRules]);
+
+  const groupedRef = React.useRef(groupedRows);
+  groupedRef.current = groupedRows;
+  React.useEffect(() => {
+    if (!expandRules) return;
+    if (!phaseId) {
+      setOpenGroups(new Set());
+      return;
+    }
+    setOpenGroups(new Set(groupedRef.current.map((group) => group.id)));
+  }, [expandRules, phaseId]);
 
   React.useEffect(() => {
     if (topicId || phaseId) setOpenGroups(new Set(groupedRows.map((g) => g.id)));
@@ -419,7 +519,7 @@ export default function ScenarioExecutionPanel({
       <Card
         title={
           <span className="inline-flex items-center gap-2 flex-wrap">
-            场景执行情况
+            {expandRules ? "监管场景执行情况" : "场景执行情况"}
             <Tag tone="brand">{activeScopeTitle}</Tag>
             {catalogMode && (
               <span className="text-[12px] text-textsub font-normal" data-testid="scenario-catalog-count">
@@ -582,7 +682,7 @@ export default function ScenarioExecutionPanel({
             <input type="checkbox" checked={onlyAbnormal} onChange={(e) => setOnlyAbnormal(e.target.checked)} />
             只看异常
           </label>
-          {catalogMode && (
+          {(catalogMode || expandRules) && (
             <>
               <Button data-testid="scenario-expand-all" onClick={expandAll}>
                 展开全部
@@ -653,7 +753,7 @@ export default function ScenarioExecutionPanel({
                         >
                           <span className="text-textsub w-3">{opened ? "▼" : "▶"}</span>
                           <span className="whitespace-normal break-words leading-5">
-                            {group.name}
+                            {expandRules ? `一级监管场景 ${group.name}` : group.name}
                           </span>
                           <span className="text-[12px] text-textsub font-normal">{subCount} 个子场景</span>
                           {group.rows.length === 0 && (
@@ -686,6 +786,13 @@ export default function ScenarioExecutionPanel({
                                 <span className="text-[14px] text-textmain block break-words whitespace-normal leading-5">{r.name}</span>
                                 {showAdoption && (
                                   <Tag tone={r.adoption === "结构化监测" ? "brand" : "neutral"}>{r.adoption}</Tag>
+                                )}
+                                {expandRules && (
+                                  <span className="block text-[12px] text-textsub mt-1 break-words leading-5">
+                                    {ruleLinesFor(r, []).length
+                                      ? `规则 ${ruleLinesFor(r, []).map((line) => line.id).join("、")}`
+                                      : "当前子场景没有可列出的监测规则"}
+                                  </span>
                                 )}
                               </button>
                             </td>
@@ -759,11 +866,92 @@ export default function ScenarioExecutionPanel({
                               <LinkButton
                                 onClick={() => setOpenRowId((id) => (id === r.id ? null : r.id))}
                               >
-                                {openRowId === r.id ? "收起" : "查看详情"}
+                                {openRowId === r.id ? "收起" : expandRules ? "规则明细" : "查看详情"}
                               </LinkButton>
                             </td>
                           </tr>
-                          {openRowId === r.id && (
+                          {openRowId === r.id && expandRules && (
+                            <tr className="bg-[#fbfcfe]">
+                              <td colSpan={7} className="px-4 py-3 border-b border-line">
+                                {(() => {
+                                  const lines = ruleLinesFor(
+                                    r,
+                                    r.counts.openRiskIds
+                                      .map((id) => asOfRisks.find((item) => item.id === id))
+                                      .filter((item): item is RiskCase => Boolean(item)),
+                                  );
+                                  if (lines.length === 0) {
+                                    return <p className="text-[13px] text-textsub">当前子场景没有可列出的监测规则。</p>;
+                                  }
+                                  return (
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full min-w-[860px] text-[13px]" data-testid={`scenario-rules-${r.id}`}>
+                                        <thead>
+                                          <tr className="text-textsub">
+                                            <th className="px-2 py-1.5 text-left font-medium">规则编号</th>
+                                            <th className="px-2 py-1.5 text-left font-medium">规则名称</th>
+                                            <th className="px-2 py-1.5 text-left font-medium">执行状态</th>
+                                            <th className="px-2 py-1.5 text-right font-medium">应评估</th>
+                                            <th className="px-2 py-1.5 text-right font-medium">已评估</th>
+                                            <th className="px-2 py-1.5 text-left font-medium">命中对象</th>
+                                            <th className="px-2 py-1.5 text-left font-medium">未关闭事项</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {lines.map((line) => (
+                                            <tr key={line.id} className="border-t border-line align-top">
+                                              <td className="px-2 py-2 num whitespace-nowrap">{line.id}</td>
+                                              <td className="px-2 py-2">{line.name}</td>
+                                              <td className="px-2 py-2"><Tag tone={line.statusTone}>{line.statusLabel}</Tag></td>
+                                              <td className="px-2 py-2 text-right num">{line.required === null ? "—" : line.required}</td>
+                                              <td className="px-2 py-2 text-right num">{line.evaluated === null ? "—" : line.evaluated}</td>
+                                              <td className="px-2 py-2">
+                                                {line.hitObjects.length === 0 ? (
+                                                  <span className="text-textsub">{line.statusLabel === "未命中" ? "未命中" : "—"}</span>
+                                                ) : (
+                                                  <span className="flex flex-col items-start gap-1">
+                                                    {line.hitObjects.map((obj) => (
+                                                      <button
+                                                        key={obj.objectId}
+                                                        type="button"
+                                                        className="text-brand hover:underline text-left"
+                                                        onClick={() => onOpenObject?.(obj.objectId)}
+                                                      >
+                                                        {objectTitle(obj.objectId)}
+                                                      </button>
+                                                    ))}
+                                                  </span>
+                                                )}
+                                              </td>
+                                              <td className="px-2 py-2">
+                                                {line.openCases.length === 0 ? (
+                                                  <span className="text-textsub">—</span>
+                                                ) : (
+                                                  <span className="flex flex-col items-start gap-1">
+                                                    {line.openCases.map((item) => (
+                                                      <button
+                                                        key={item.id}
+                                                        type="button"
+                                                        className="text-brand hover:underline text-left"
+                                                        onClick={() => onOpenRisk(item.id)}
+                                                      >
+                                                        {item.id} {item.title}
+                                                      </button>
+                                                    ))}
+                                                  </span>
+                                                )}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  );
+                                })()}
+                              </td>
+                            </tr>
+                          )}
+                          {openRowId === r.id && !expandRules && (
                             <tr className="bg-[#fbfcfe]">
                               <td colSpan={7} className="px-4 py-3 text-[13px] border-b border-line">
                                 <div className="flex flex-wrap gap-x-5 gap-y-2">
