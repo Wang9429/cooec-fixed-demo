@@ -21,8 +21,9 @@ import {
   type FiveCounts,
   type ScopeFilter,
 } from "@/lib/monitoring";
-import { isScenarioMonitoringActive, liveRule, liveRules, liveSub, hasEffectiveExecutableRule } from "@/lib/live-config";
+import { isScenarioMonitoringActive, liveSub, hasEffectiveExecutableRule } from "@/lib/live-config";
 import {
+  catalog as investmentCatalog,
   objectTypeLabel,
   phaseName,
   scenarioAdoption,
@@ -30,7 +31,6 @@ import {
   scenarioSourceLabel,
 } from "@/lib/seed";
 import { orgName } from "@/lib/org";
-import { objectName } from "@/lib/objects";
 import { isOverdueRectification, rectificationDueDate, riskMatches, snapshotRisksAtAsOf, statusLabel } from "@/lib/risks";
 import { daysBetween, fmtDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/export";
@@ -38,7 +38,8 @@ import { useDemoStore } from "@/lib/store";
 import type { DomainId, MonitoringRow, RiskCase } from "@/lib/types";
 import { officialDirectory, scopedDirectory } from "@/lib/fp-directory";
 import { scenarioFitsBehavior } from "@/lib/fp-topics";
-import { faScenarioFacts, ruleBasisLines } from "@/lib/investment-focus";
+import { faScenarioMonitor, monitorSummaryText, type FaScenarioMonitor } from "@/lib/investment-focus";
+import FaScenarioDetail from "@/components/FaScenarioDetail";
 import { monitoringNoteLabel, objectTitle, riskTitleOf, ruleDisplayName } from "@/lib/fp-display";
 
 /**
@@ -79,83 +80,6 @@ interface ScenarioRow {
   redOpen: number;
   objectTypes: string[];
   hitRuleCount: number;
-}
-
-interface RuleLine {
-  id: string;
-  name: string;
-  statusLabel: string;
-  statusTone: "red" | "amber" | "green" | "neutral";
-  required: number | null;
-  evaluated: number | null;
-  hitObjects: { objectId: string; objectType: string }[];
-  openCases: RiskCase[];
-}
-
-function ruleLinesFor(row: ScenarioRow, openCases: RiskCase[]): RuleLine[] {
-  const ids = new Set<string>();
-  for (const rule of liveRules()) {
-    if (rule.primary_subscenario_id === row.id) ids.add(rule.id);
-  }
-  for (const record of row.rows) {
-    for (const id of record.rule_ids) ids.add(id);
-  }
-  return [...ids].sort().map((id) => {
-    const meta = liveRule(id);
-    const related = row.rows.filter((record) => record.rule_ids.includes(id));
-    const statuses = new Set(related.map((record) => record.status));
-    let statusLabel = "未执行";
-    let statusTone: RuleLine["statusTone"] = "neutral";
-    if (related.length === 0) {
-      if (row.statusLabelText.includes("未具备") || row.statusLabelText.includes("不具备")) {
-        statusLabel = "不具备运行条件";
-      } else if (row.statusLabelText === "未启用" || row.statusLabelText === "未开展监测" || row.statusLabelText.startsWith("未评估")) {
-        statusLabel = row.statusLabelText.startsWith("未评估") ? "未执行" : row.statusLabelText;
-      }
-    } else if (statuses.has("evaluated_hit")) {
-      statusLabel = "命中";
-      statusTone = "red";
-    } else if ([...statuses].every((status) => status === "evaluated_clear")) {
-      statusLabel = "未命中";
-      statusTone = "green";
-    } else if (statuses.has("data_insufficient")) {
-      statusLabel = "不具备运行条件";
-      statusTone = "amber";
-    } else if ([...statuses].every((status) => status === "not_applicable")) {
-      statusLabel = "不适用";
-    } else if (statuses.has("not_due")) {
-      statusLabel = "尚未到核查时点";
-    } else if (statuses.has("reference_only")) {
-      statusLabel = "待专业核查";
-      statusTone = "amber";
-    } else if (statuses.has("evaluated_clear")) {
-      statusLabel = "未命中";
-      statusTone = "green";
-    }
-    const unique = (records: MonitoringRow[]) => {
-      const map = new Map<string, { objectId: string; objectType: string }>();
-      for (const record of records) {
-        map.set(record.monitoring_object_id, { objectId: record.monitoring_object_id, objectType: record.object_type });
-      }
-      return [...map.values()];
-    };
-    const required = related.length
-      ? unique(related.filter((record) => record.required && record.status !== "not_applicable" && record.status !== "reference_only")).length
-      : null;
-    const evaluated = related.length
-      ? unique(related.filter((record) => record.status === "evaluated_hit" || record.status === "evaluated_clear")).length
-      : null;
-    return {
-      id,
-      name: meta?.name ?? id,
-      statusLabel,
-      statusTone,
-      required,
-      evaluated,
-      hitObjects: unique(related.filter((record) => record.status === "evaluated_hit")),
-      openCases: openCases.filter((item) => item.rule_id === id),
-    };
-  });
 }
 
 export interface TopicChipOption {
@@ -221,7 +145,7 @@ export default function ScenarioExecutionPanel({
   const [objectTypeFilter, setObjectTypeFilter] = useState("all");
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [openRowId, setOpenRowId] = useState<string | null>(null);
-  const [ruleBasisId, setRuleBasisId] = useState<string | null>(null);
+  const [faDetail, setFaDetail] = useState<{ id: string; focus: "overview" | "rules" } | null>(null);
 
   const baseScope: ScopeFilter = useMemo(
     () => ({
@@ -312,6 +236,10 @@ export default function ScenarioExecutionPanel({
           const phases = [sub?.primary_phase_id, ...(sub?.associated_phase_ids ?? [])].filter((id): id is string => Boolean(id));
           if (phases.length > 0 && !phases.includes(phaseId)) return false;
         }
+        if (expandRules && subtopicId) {
+          const topic = investmentCatalog.scenarios.find((item) => item.id === r.id)?.subtopic_id;
+          if (topic && topic !== subtopicId) return false;
+        }
         if (catalogMode) {
           return hasEffectiveExecutableRule(r.id, filters.asOf) && scenarioFitsBehavior(r.id, behaviorId);
         }
@@ -339,7 +267,7 @@ export default function ScenarioExecutionPanel({
         const d = rank(a) - rank(b);
         return d !== 0 ? d : a.id.localeCompare(b.id);
       });
-  }, [domain, phaseId, topicId, behaviorId, baseScope, asOfRisks, summary.openRiskIds, orgIds, allowedObjectIds, catalog.groups, directoryDomain, filters.asOf]);
+  }, [domain, phaseId, topicId, subtopicId, expandRules, behaviorId, baseScope, asOfRisks, summary.openRiskIds, orgIds, allowedObjectIds, catalog.groups, directoryDomain, filters.asOf]);
 
   const visibleScenarioRows = useMemo(
     () =>
@@ -360,6 +288,36 @@ export default function ScenarioExecutionPanel({
       }),
     [scenarioRows, search, onlyAbnormal, statusFilter, objectTypeFilter],
   );
+
+  const monitors = useMemo(() => {
+    const map = new Map<string, FaScenarioMonitor>();
+    if (!expandRules) return map;
+    for (const row of visibleScenarioRows) {
+      const cases = row.counts.openRiskIds
+        .map((id) => asOfRisks.find((item) => item.id === id))
+        .filter((item): item is RiskCase => Boolean(item))
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          ruleId: item.rule_id,
+          objectId: item.primary_object_id,
+        }));
+      map.set(
+        row.id,
+        faScenarioMonitor({
+          scenarioId: row.id,
+          phaseId,
+          asOf: filters.asOf,
+          periodStart: filters.periodStart,
+          periodEnd: filters.periodEnd,
+          orgIds,
+          allowed: allowedObjectIds,
+          cases,
+        }),
+      );
+    }
+    return map;
+  }, [expandRules, visibleScenarioRows, asOfRisks, phaseId, filters.asOf, filters.periodStart, filters.periodEnd, orgIds, allowedObjectIds]);
 
   const statusOptions = useMemo(
     () => [...new Set(scenarioRows.map((r) => r.statusLabelText))].sort(),
@@ -448,13 +406,36 @@ export default function ScenarioExecutionPanel({
       list.push(r);
       map.set(g, list);
     }
-    return [...map.entries()].map(([name, rows], order) => ({
+    const groups = [...map.entries()].map(([name, rows], order) => ({
       id: rows[0]?.groupId || name,
       name,
       order,
       rows,
       catalogChildren: rows.length,
     }));
+    if (!expandRules) return groups;
+    const pending: ScenarioRow[] = [];
+    const main = groups
+      .map((group) => {
+        const stay: ScenarioRow[] = [];
+        for (const row of group.rows) {
+          const monitor = monitors.get(row.id);
+          if (monitor?.pendingConfig) pending.push(row);
+          else stay.push(row);
+        }
+        return { ...group, rows: stay, catalogChildren: stay.length };
+      })
+      .filter((group) => group.rows.length > 0);
+    if (pending.length > 0) {
+      main.push({
+        id: "fa-pending-config",
+        name: "待配置/待完善",
+        order: 999,
+        rows: pending,
+        catalogChildren: pending.length,
+      });
+    }
+    return main;
   }, [
     catalogMode,
     directoryDomain,
@@ -467,21 +448,20 @@ export default function ScenarioExecutionPanel({
     objectTypeFilter,
     behaviorId,
     filters.asOf,
+    expandRules,
+    monitors,
   ]);
 
-  const scenarioRef = React.useRef(visibleScenarioRows);
-  scenarioRef.current = visibleScenarioRows;
+  const groupIdsToOpen = (groups: { id: string }[]) => {
+    if (!expandRules) return groups.map((group) => group.id);
+    const main = groups.filter((group) => group.id !== "fa-pending-config");
+    return (main.length > 0 ? main : groups).map((group) => group.id);
+  };
+
   React.useEffect(() => {
     setDetail(null);
-    setRuleBasisId(null);
-    if (!expandRules || !phaseId) {
-      setOpenRowId(null);
-      return;
-    }
-    const hit = scenarioRef.current.find(
-      (row) => row.hitRuleCount > 0 || row.counts.hitObjects.length > 0 || row.counts.openRiskIds.length > 0,
-    );
-    setOpenRowId(hit?.id ?? null);
+    setFaDetail(null);
+    setOpenRowId(null);
   }, [topicId, phaseId, behaviorId, directoryDomain, subtopicId, expandRules]);
 
   const groupedRef = React.useRef(groupedRows);
@@ -492,11 +472,11 @@ export default function ScenarioExecutionPanel({
       setOpenGroups(new Set());
       return;
     }
-    setOpenGroups(new Set(groupedRef.current.map((group) => group.id)));
+    setOpenGroups(new Set(groupIdsToOpen(groupedRef.current)));
   }, [expandRules, phaseId]);
 
   React.useEffect(() => {
-    if (topicId || phaseId) setOpenGroups(new Set(groupedRows.map((g) => g.id)));
+    if (topicId || phaseId) setOpenGroups(new Set(groupIdsToOpen(groupedRows)));
     else setOpenGroups(new Set());
   }, [topicId, phaseId, behaviorId, groupedRows]);
 
@@ -545,6 +525,7 @@ export default function ScenarioExecutionPanel({
                   {subtopicOptions.map((o) => (
                     <button
                       key={o.id}
+                      data-testid={`scenario-subtopic-${o.id}`}
                       onClick={() => onSubtopicChange?.(o.id)}
                       className={`h-8 px-3 text-[12px] transition-colors duration-150 ${
                         (subtopicId ?? subtopicOptions[0].id) === o.id
@@ -720,16 +701,15 @@ export default function ScenarioExecutionPanel({
         </div>
 
         <div className="overflow-x-auto -mx-1 px-1" data-testid="scenario-exec-table">
-          <table className={`w-full ${expandRules ? "min-w-[960px]" : "min-w-[1080px]"} border-separate border-spacing-0 text-[14px]`}>
+          <table className={`w-full ${expandRules ? "min-w-[880px]" : "min-w-[1080px]"} border-separate border-spacing-0 text-[14px]`}>
             <thead>
               {expandRules ? (
                 <tr className="bg-[#f6f8fc]">
-                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line w-[220px]">监管子场景</th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line">关键监控数据</th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line w-[180px]">规则执行</th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line w-[160px]">命中对象</th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line w-[180px]">关联事项</th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[88px]">依据</th>
+                  <th className="px-3 py-2 text-left text-[13px] font-semibold text-textsub border-b border-line w-[200px]">监管子场景</th>
+                  <th className="px-3 py-2 text-left text-[13px] font-semibold text-textsub border-b border-line">关键监控数据</th>
+                  <th className="px-3 py-2 text-left text-[13px] font-semibold text-textsub border-b border-line w-[148px]">规则执行</th>
+                  <th className="px-3 py-2 text-left text-[13px] font-semibold text-textsub border-b border-line w-[168px]">命中与事项</th>
+                  <th className="px-3 py-2 text-left text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[132px]">查看</th>
                 </tr>
               ) : (
                 <tr className="bg-[#f6f8fc]">
@@ -746,7 +726,7 @@ export default function ScenarioExecutionPanel({
             <tbody>
               {visibleScenarioRows.length === 0 && groupedRows.length === 0 && (
                 <tr>
-                  <td colSpan={expandRules ? 6 : 7} className="px-3 py-4 text-center text-[13px] text-textsub border-b border-line">
+                  <td colSpan={expandRules ? 5 : 7} className="px-3 py-4 text-center text-[13px] text-textsub border-b border-line">
                     {scenarioRows.length === 0 ? "当前范围没有已启用且可实际执行的监管规则。" : "当前筛选条件下没有匹配场景，请调整搜索或筛选。"}
                   </td>
                 </tr>
@@ -757,7 +737,7 @@ export default function ScenarioExecutionPanel({
                 return (
                   <React.Fragment key={group.id}>
                     <tr className="bg-[#f7f9fd]" data-testid={`scenario-group-${group.id}`}>
-                      <td colSpan={expandRules ? 6 : 7} className="px-3 py-2 border-b border-line">
+                      <td colSpan={expandRules ? 5 : 7} className="px-3 py-2 border-b border-line">
                         <button
                           type="button"
                           className="inline-flex items-center gap-2 text-[13px] font-medium text-textmain text-left"
@@ -772,7 +752,7 @@ export default function ScenarioExecutionPanel({
                         >
                           <span className="text-textsub w-3">{opened ? "▼" : "▶"}</span>
                           <span className="whitespace-normal break-words leading-5">
-                            {expandRules ? `一级监管场景 ${group.name}` : group.name}
+                            {expandRules ? (group.id === "fa-pending-config" ? group.name : `一级监管场景 ${group.name}`) : group.name}
                           </span>
                           <span className="text-[12px] text-textsub font-normal">{subCount} 个子场景</span>
                           {group.rows.length === 0 && (
@@ -792,25 +772,31 @@ export default function ScenarioExecutionPanel({
                             r.statusLabelText === "未开展监测" ||
                             r.statusLabelText === "无业务");
                         const showAdoption =
-                          r.adoption === "结构化监测" || r.adoption === "线索核查" || r.adoption === "专业核查";
-                        const monitoredIds = [...new Set(r.rows.map((record) => record.monitoring_object_id))];
-                        const factText =
-                          faScenarioFacts(r.id, monitoredIds, filters.asOf, orgIds, allowedObjectIds) ??
-                          "本场景当前没有可汇总的业务监测值。";
-                        const scenarioCases = r.counts.openRiskIds
-                          .map((id) => asOfRisks.find((item) => item.id === id))
-                          .filter((item): item is RiskCase => Boolean(item));
-                        const lines = expandRules ? ruleLinesFor(r, scenarioCases) : [];
-                        const linkedCaseIds = new Set(lines.flatMap((line) => line.openCases.map((item) => item.id)));
-                        const unmatchedCases = scenarioCases.filter((item) => !linkedCaseIds.has(item.id));
-                        const hitObjects = [...new Map(lines.flatMap((line) => line.hitObjects).map((item) => [item.objectId, item])).values()];
+                          !expandRules &&
+                          (r.adoption === "结构化监测" || r.adoption === "线索核查" || r.adoption === "专业核查");
+                        const monitor = expandRules ? monitors.get(r.id) : undefined;
+                        const executed = Boolean(monitor && (monitor.ruleStatusLabel.startsWith("已执行") || monitor.ruleStatusLabel.startsWith("已记录")));
+                        const matterCount = (monitor?.directCaseIds.length ?? 0) + (monitor?.otherCaseIds.length ?? 0);
+                        const hitText = !monitor
+                          ? "—"
+                          : executed
+                            ? [
+                                `命中对象 ${monitor.hitObjectIds.length}`,
+                                monitor.directCaseIds.length ? `规则事项 ${monitor.directCaseIds.length}` : "",
+                                monitor.otherCaseIds.length ? `其他事项 ${monitor.otherCaseIds.length}` : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")
+                            : matterCount > 0
+                              ? `事项 ${matterCount}`
+                              : "命中 —";
                         return (
                         <React.Fragment key={r.id}>
                           <tr className="hover:bg-tint border-b border-line" data-testid={`scenario-sub-${r.id}`}>
-                            <td className="px-3 py-2 align-top">
+                            <td className={`px-3 align-top ${expandRules ? "py-1.5" : "py-2"}`}>
                               <button
                                 className="text-left hover:text-brand transition-colors duration-150"
-                                onClick={() => onOpenScenario?.(r.id)}
+                                onClick={() => (expandRules ? setFaDetail({ id: r.id, focus: "overview" }) : onOpenScenario?.(r.id))}
                                 title={scenarioSourceLabel(r.id)}
                               >
                                 <span className="text-[14px] text-textmain block break-words whitespace-normal leading-5">{r.name}</span>
@@ -821,48 +807,16 @@ export default function ScenarioExecutionPanel({
                             </td>
                             {expandRules && (
                               <>
-                                <td className="px-3 py-2 align-top text-[12px] text-textmain leading-5 break-words" data-testid={`scenario-facts-${r.id}`}>
-                                  {factText}
+                                <td className="px-3 py-1.5 align-middle text-[13px] text-textmain leading-5" data-testid={`scenario-facts-${r.id}`}>
+                                  <span className="line-clamp-2">{monitor ? monitorSummaryText(monitor) : "—"}</span>
                                 </td>
-                                <td className="px-3 py-2 align-top text-[12px] leading-5">
-                                  {lines.length === 0 ? (
-                                    <span className="text-textsub">未配置规则</span>
-                                  ) : (
-                                    lines.map((line) => (
-                                      <span key={line.id} className="block">
-                                        <span className="num">{line.id}</span> <Tag tone={line.statusTone}>{line.statusLabel}</Tag>
-                                      </span>
-                                    ))
-                                  )}
+                                <td className="px-3 py-1.5 align-middle text-[13px] leading-5">
+                                  <Tag tone={monitor && monitor.ruleStatusLabel.includes("并命中") ? "red" : monitor?.ruleStatusLabel.includes("未命中") ? "green" : monitor?.ruleStatusLabel.includes("未形成") ? "amber" : "neutral"}>
+                                    {monitor?.ruleStatusLabel ?? "未配置正式规则"}
+                                  </Tag>
                                 </td>
-                                <td className="px-3 py-2 align-top text-[12px] leading-5">
-                                  {hitObjects.length === 0 ? (
-                                    <span className="text-textsub">—</span>
-                                  ) : (
-                                    hitObjects.map((item) => (
-                                      <button key={item.objectId} type="button" className="block text-left text-brand hover:underline" onClick={() => onOpenObject?.(item.objectId)}>
-                                        {objectName(item.objectId)}
-                                      </button>
-                                    ))
-                                  )}
-                                </td>
-                                <td className="px-3 py-2 align-top text-[12px] leading-5">
-                                  {lines.flatMap((line) => line.openCases).length === 0 && unmatchedCases.length === 0 ? (
-                                    <span className="text-textsub">—</span>
-                                  ) : (
-                                    <>
-                                      {lines.flatMap((line) => line.openCases).map((item) => (
-                                        <button key={item.id} type="button" className="block text-left text-brand hover:underline" onClick={() => onOpenRisk(item.id)}>
-                                          {item.id} {item.title}
-                                        </button>
-                                      ))}
-                                      {unmatchedCases.length > 0 && (
-                                        <span className="block text-textsub" data-testid={`scenario-unmatched-${r.id}`}>
-                                          另有 {unmatchedCases.map((item) => item.id).join("、")} 未由上述规则命中
-                                        </span>
-                                      )}
-                                    </>
-                                  )}
+                                <td className="px-3 py-1.5 align-middle text-[13px] leading-5 text-textmain" data-testid={`scenario-hits-${r.id}`}>
+                                  <span data-testid={monitor && monitor.otherCaseIds.length > 0 ? `scenario-unmatched-${r.id}` : undefined}>{hitText}</span>
                                 </td>
                               </>
                             )}
@@ -936,120 +890,28 @@ export default function ScenarioExecutionPanel({
                             </td>
                             </>
                             )}
-                            <td className="px-3 py-2 align-top whitespace-nowrap">
-                              <LinkButton
-                                onClick={() => setOpenRowId((id) => (id === r.id ? null : r.id))}
-                              >
-                                {openRowId === r.id ? "收起" : expandRules ? "计算依据" : "查看详情"}
-                              </LinkButton>
+                            <td className={`px-3 align-top whitespace-nowrap ${expandRules ? "py-1.5" : "py-2"}`}>
+                              {expandRules ? (
+                                <span className="inline-flex items-center gap-2">
+                                  <LinkButton data-testid={`scenario-open-${r.id}`} onClick={() => setFaDetail({ id: r.id, focus: "overview" })}>
+                                    查看详情
+                                  </LinkButton>
+                                  {monitor?.hasCalculation ? (
+                                    <LinkButton data-testid={`scenario-calc-${r.id}`} onClick={() => setFaDetail({ id: r.id, focus: "rules" })}>
+                                      计算依据
+                                    </LinkButton>
+                                  ) : null}
+                                </span>
+                              ) : (
+                                <LinkButton onClick={() => setOpenRowId((id) => (id === r.id ? null : r.id))}>
+                                  {openRowId === r.id ? "收起" : "查看详情"}
+                                </LinkButton>
+                              )}
                             </td>
                           </tr>
-                          {openRowId === r.id && expandRules && (
-                            <tr className="bg-[#fbfcfe]">
-                              <td colSpan={expandRules ? 6 : 7} className="px-4 py-3 border-b border-line">
-                                {(() => {
-                                  const lines = ruleLinesFor(
-                                    r,
-                                    r.counts.openRiskIds
-                                      .map((id) => asOfRisks.find((item) => item.id === id))
-                                      .filter((item): item is RiskCase => Boolean(item)),
-                                  );
-                                  if (lines.length === 0) {
-                                    return <p className="text-[13px] text-textsub">当前子场景没有可列出的监测规则。</p>;
-                                  }
-                                  return (
-                                    <div className="overflow-x-auto">
-                                      <table className="w-full min-w-[860px] text-[13px]" data-testid={`scenario-rules-${r.id}`}>
-                                        <thead>
-                                          <tr className="text-textsub">
-                                            <th className="px-2 py-1.5 text-left font-medium">规则编号</th>
-                                            <th className="px-2 py-1.5 text-left font-medium">规则名称</th>
-                                            <th className="px-2 py-1.5 text-left font-medium">执行状态</th>
-                                            <th className="px-2 py-1.5 text-right font-medium">应评估</th>
-                                            <th className="px-2 py-1.5 text-right font-medium">已评估</th>
-                                            <th className="px-2 py-1.5 text-left font-medium">命中对象</th>
-                                            <th className="px-2 py-1.5 text-left font-medium">未关闭事项</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {lines.map((line) => (
-                                            <React.Fragment key={line.id}>
-                                            <tr className="border-t border-line align-top">
-                                              <td className="px-2 py-2 num whitespace-nowrap">
-                                                <button
-                                                  type="button"
-                                                  className="text-brand hover:underline"
-                                                  onClick={() => setRuleBasisId((current) => (current === `${r.id}:${line.id}` ? null : `${r.id}:${line.id}`))}
-                                                >
-                                                  {line.id}
-                                                </button>
-                                              </td>
-                                              <td className="px-2 py-2">{line.name}</td>
-                                              <td className="px-2 py-2"><Tag tone={line.statusTone}>{line.statusLabel}</Tag></td>
-                                              <td className="px-2 py-2 text-right num">{line.required === null ? "—" : line.required}</td>
-                                              <td className="px-2 py-2 text-right num">{line.evaluated === null ? "—" : line.evaluated}</td>
-                                              <td className="px-2 py-2">
-                                                {line.hitObjects.length === 0 ? (
-                                                  <span className="text-textsub">{line.statusLabel === "未命中" ? "未命中" : "—"}</span>
-                                                ) : (
-                                                  <span className="flex flex-col items-start gap-1">
-                                                    {line.hitObjects.map((obj) => (
-                                                      <button
-                                                        key={obj.objectId}
-                                                        type="button"
-                                                        className="text-brand hover:underline text-left"
-                                                        onClick={() => onOpenObject?.(obj.objectId)}
-                                                      >
-                                                        {objectTitle(obj.objectId)}
-                                                      </button>
-                                                    ))}
-                                                  </span>
-                                                )}
-                                              </td>
-                                              <td className="px-2 py-2">
-                                                {line.openCases.length === 0 ? (
-                                                  <span className="text-textsub">—</span>
-                                                ) : (
-                                                  <span className="flex flex-col items-start gap-1">
-                                                    {line.openCases.map((item) => (
-                                                      <button
-                                                        key={item.id}
-                                                        type="button"
-                                                        className="text-brand hover:underline text-left"
-                                                        onClick={() => onOpenRisk(item.id)}
-                                                      >
-                                                        {item.id} {item.title}
-                                                      </button>
-                                                    ))}
-                                                  </span>
-                                                )}
-                                              </td>
-                                            </tr>
-                                            {ruleBasisId === `${r.id}:${line.id}` && (
-                                              <tr className="bg-white">
-                                                <td colSpan={7} className="px-2 py-2 text-[12px] text-textsub leading-5" data-testid={`rule-basis-${line.id}`}>
-                                                  {ruleBasisLines(
-                                                    line.id,
-                                                    [...new Set(r.rows.map((record) => record.monitoring_object_id))],
-                                                  ).map((text) => (
-                                                    <p key={text}>{text}</p>
-                                                  ))}
-                                                </td>
-                                              </tr>
-                                            )}
-                                            </React.Fragment>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  );
-                                })()}
-                              </td>
-                            </tr>
-                          )}
                           {openRowId === r.id && !expandRules && (
                             <tr className="bg-[#fbfcfe]">
-                              <td colSpan={expandRules ? 6 : 7} className="px-4 py-3 text-[13px] border-b border-line">
+                              <td colSpan={expandRules ? 5 : 7} className="px-4 py-3 text-[13px] border-b border-line">
                                 <div className="flex flex-wrap gap-x-5 gap-y-2">
                                   <button type="button" className="hover:text-brand" onClick={() => setDetail({ kind: "closed", scenarioId: r.id })}>
                                     本期完成整改 <span className="num font-medium">{r.counts.rectifiedClosedRiskIds.length}</span> 件
@@ -1077,6 +939,16 @@ export default function ScenarioExecutionPanel({
         </div>
         {ledger ? <div className="mt-4">{ledger}</div> : null}
       </Card>
+
+      <FaScenarioDetail
+        open={Boolean(faDetail)}
+        title={faDetail ? scenarioName(faDetail.id) : ""}
+        monitor={faDetail ? (monitors.get(faDetail.id) ?? null) : null}
+        focus={faDetail?.focus ?? "overview"}
+        onClose={() => setFaDetail(null)}
+        onOpenObject={onOpenObject}
+        onOpenRisk={onOpenRisk}
+      />
 
       <Modal
         open={Boolean(detail)}
