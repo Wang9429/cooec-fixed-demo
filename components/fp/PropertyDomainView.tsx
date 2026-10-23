@@ -3,32 +3,47 @@
 import React, { useEffect, useMemo, useState } from "react";
 import FilterBar from "@/components/FilterBar";
 import PageHeader from "@/components/PageHeader";
-import ChevronFlow, { type ChevronItem } from "@/components/ChevronFlow";
 import IndicatorDrawer from "@/components/IndicatorDrawer";
 import RiskCaseDrawer from "@/components/RiskCaseDrawer";
 import ScenarioDrawer from "@/components/ScenarioDrawer";
 import ObjectDrawer from "@/components/ObjectDrawer";
 import ScenarioExecutionPanel from "@/components/ScenarioExecutionPanel";
-import { Card, DataTable, KpiCard, Tag } from "@/components/ui";
+import { Card, DataTable, Tag } from "@/components/ui";
 import { useDemoStore } from "@/lib/store";
 import { authorizedObjectIds, canDomain, intersectOrgScope } from "@/lib/config";
 import { descendantOrgIds, orgName, orgPath } from "@/lib/org";
-import { seed, templateById } from "@/lib/seed";
+import { seed } from "@/lib/seed";
 import { censusCounts, openMatterCount, penetratePaths } from "@/lib/fp-census";
-import { ECONOMIC_BEHAVIORS, RIGHTS_TOPICS } from "@/lib/fp-topics";
+import { ECONOMIC_BEHAVIORS } from "@/lib/fp-topics";
+import type { PropertyMatter } from "@/lib/types";
+
+const RIGHTS_THEMES = [
+  { id: "PTY2-T-REG", label: "产权登记与信息核验" },
+  { id: "PTY2-T-TRADE", label: "产权交易与变动" },
+  { id: "PTY2-T-IDENTITY", label: "标识与名称资质" },
+  { id: "PTY2-T-CONTROL", label: "股权关系与控制权" },
+] as const;
+
+function matterTopic(templateId: string): string | null {
+  if (templateId.startsWith("PR-REG")) return "PTY2-T-REG";
+  if (/^PR-(TRANSFER|FREE|CAPITAL|ASSET|LISTED)/.test(templateId)) return "PTY2-T-TRADE";
+  return null;
+}
 import { indicatorById, type IndicatorDef } from "@/lib/metrics";
 import { isRunnableDrawerIndicator } from "@/lib/indicator-scope";
 import HoldingsTable from "@/components/fp/HoldingsTable";
-import { entityName, holdingRowsFor } from "@/lib/fp-display";
+import { entityName, holdingDiffNote, holdingRowsFor } from "@/lib/fp-display";
+import { isOpen, isOverdueRectification, riskMatches } from "@/lib/risks";
 
 export default function PropertyDomainView() {
-  const { filters, user, catalog } = useDemoStore();
+  const { filters, user, catalog, risks } = useDemoStore();
   const [subjectId, setSubjectId] = useState(filters.orgId);
   const [subjectChildren, setSubjectChildren] = useState(filters.includeChildren);
   const [focusEntity, setFocusEntity] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "graph">("list");
   const [censusFilter, setCensusFilter] = useState<"N" | "C" | "P" | "T" | null>(null);
-  const [topicId, setTopicId] = useState<string | null>("PTY2-T-TRADE");
+  const [topicId, setTopicId] = useState<string | null>("PTY2-T-REG");
+  const [showEntities, setShowEntities] = useState(false);
   const [behavior, setBehavior] = useState<string>("nonlisted_transfer");
   const [lastTradeBehavior, setLastTradeBehavior] = useState<string>("nonlisted_transfer");
   const [phaseId, setPhaseId] = useState<string | null>(null);
@@ -61,27 +76,28 @@ export default function PropertyDomainView() {
   const allowedObjectIds = useMemo(() => authorizedObjectIds(user), [user]);
   const census = useMemo(() => censusCounts(pageOrgIds, filters.asOf), [pageOrgIds, filters.asOf]);
   const matters = useMemo(() => openMatterCount(pageOrgIds), [pageOrgIds]);
-  const selectedBehavior = ECONOMIC_BEHAVIORS.find((x) => x.id === behavior) ?? null;
-  const template = selectedBehavior ? templateById(selectedBehavior.templateId) : undefined;
-
-  const chevrons: ChevronItem[] = useMemo(() => {
-    if (topicId !== "PTY2-T-TRADE" || !template) return [];
-    return template.phase_nodes
-      .slice()
-      .sort((a, b) => a.display_order - b.display_order)
-      .map((n) => {
-        const inst = seed.lifecycle_instances.find(
-          (i) => i.template_id === template.id && i.phase_id === n.id && i.business_status === "not_applicable",
-        );
-        return {
-          id: n.id,
-          name: n.name,
-          openCount: 0,
-          severity: null,
-          businessNote: inst ? "不适用（有依据）" : undefined,
-        };
-      });
-  }, [topicId, template]);
+  const themeMatters = useMemo(() => {
+    return seed.property_matters.filter((matter) => pageOrgIds.has(matter.owner_org_id) && matterTopic(matter.template_id) === topicId);
+  }, [pageOrgIds, topicId]);
+  const overdueMatters = useMemo(() => {
+    return themeMatters.filter((matter) => {
+      const current = seed.lifecycle_instances.find((item) => item.object_id === matter.id && item.phase_id === matter.current_phase_id);
+      return Boolean(
+        current?.approved_plan_end &&
+          current.approved_plan_end < filters.asOf &&
+          current.business_status !== "completed" &&
+          !current.actual_end,
+      );
+    });
+  }, [themeMatters, filters.asOf]);
+  const openRights = useMemo(
+    () => risks.filter((item) => isOpen(item) && riskMatches(item, { domain: "RIGHTS", orgScope: pageOrgIds })),
+    [risks, pageOrgIds],
+  );
+  const diffEntities = useMemo(
+    () => census.list.filter((row) => holdingDiffNote(holdingRowsFor(row.entity.id))),
+    [census.list],
+  );
 
   const path = orgPath(subjectId).filter((o) => globalOrgIds.has(o.id) || o.id === filters.orgId);
   const gate = path.findIndex((o) => o.id === filters.orgId);
@@ -149,36 +165,39 @@ export default function PropertyDomainView() {
         )}
       </div>
 
-      <Card title="法人及股权全景">
+      <Card title="产权监管范围">
         {canDomain(user, "RIGHTS") ? (
-          <div className="reg-kpis-domain" data-testid="rights-kpi-grid">
-            {censusKpiDefs.some((d) => d.id === "PTY2-I01") && (
-              <KpiCard compact name="纳管法人户数" value={String(census.N)} unit="户" onOpen={() => openCensusIndicator("PTY2-I01", "N")} returnKey="N" />
-            )}
-            {censusKpiDefs.some((d) => d.id === "PTY2-I02") && (
-              <KpiCard
-                compact
-                name="控股及实际控制企业户数"
-                value={String(census.C)}
-                unit="户"
-                dataState={`全资${census.whollyInC}户／非全资${census.nonWhollyInC}户`}
-                onOpen={() => openCensusIndicator("PTY2-I02", "C")}
-                returnKey="C"
-              />
-            )}
-            {censusKpiDefs.some((d) => d.id === "PTY2-I03") && (
-              <KpiCard compact name="参股企业户数" value={String(census.P)} unit="户" onOpen={() => openCensusIndicator("PTY2-I03", "P")} returnKey="P" />
-            )}
-            {censusKpiDefs.some((d) => d.id === "PTY2-I04") && (
-              <KpiCard compact name="在办产权事项数" value={String(matters.count)} unit="项" onOpen={() => openCensusIndicator("PTY2-I04", "T")} returnKey="T" />
-            )}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px]" data-testid="rights-compact-stats">
+            <span className="text-textsub">纳管法人 <span className="num text-textmain">{census.N}</span> 户</span>
+            <button type="button" className="hover:text-brand" onClick={() => openCensusIndicator("PTY2-I04", "T")}>
+              在办产权事项 <span className="num font-semibold">{matters.count}</span> 项
+            </button>
+            <span>
+              当前主题计划逾期 <span className="num font-semibold">{overdueMatters.length}</span> 项
+            </span>
+            <span>
+              持股来源待核查 <span className="num font-semibold">{diffEntities.length}</span> 户
+            </span>
+            <button type="button" className="hover:text-brand" onClick={() => openRights[0] && setRiskId(openRights[0].id)}>
+              未关闭监管事项 <span className="num font-semibold">{openRights.length}</span> 件
+              <span className="text-textsub">（逾期整改 {openRights.filter((item) => isOverdueRectification(item, filters.asOf)).length}）</span>
+            </button>
+            <button
+              type="button"
+              data-testid="rights-open-entities"
+              className="h-8 px-3 rounded-[6px] border border-line text-[12px] hover:bg-tint"
+              onClick={() => setShowEntities((value) => !value)}
+            >
+              {showEntities ? "收起法人及股权关系" : "查看法人及股权关系"}
+            </button>
           </div>
         ) : (
           <p className="text-[13px] text-textsub">当前身份不能查看产权经营数据。</p>
         )}
-        <p className="text-[12px] text-textsub mt-2">控制待核实 {census.U} 户单列。分支机构不算法人。点击股权图中的法人只聚焦档案，四卡仍为当前组织范围。</p>
-
-        <div className="flex gap-2 mt-4 mb-3">
+        <p className="text-[12px] text-textsub mt-2">控制待核实 {census.U} 户。分支机构不算法人。股比差异先列入待核查，不直接认定违规或实际控制变化。</p>
+        {showEntities && (
+          <div className="mt-4" data-testid="rights-entity-panel">
+        <div className="flex gap-2 mb-3">
           <button type="button" className={`h-8 px-3 rounded-[6px] border text-[12px] ${view === "list" ? "border-brand bg-tint text-brand" : "border-line"}`} onClick={() => setView("list")}>
             法人清单
           </button>
@@ -242,6 +261,8 @@ export default function PropertyDomainView() {
             </div>
           </div>
         )}
+          </div>
+        )}
       </Card>
 
       <ScenarioExecutionPanel
@@ -266,21 +287,16 @@ export default function PropertyDomainView() {
         topicNavTestId="rights-topic-nav"
         allTopicTestId="rights-topic-all"
         allTopicLabel="全部场景（10）"
-        topicOptions={RIGHTS_TOPICS.map((t) => ({ id: t.id, label: t.short, testId: `rights-topic-${t.id}` }))}
-        phaseId={topicId === "PTY2-T-TRADE" ? phaseId : null}
+        topicOptions={RIGHTS_THEMES.map((t) => ({ id: t.id, label: t.label, testId: `rights-topic-${t.id}` }))}
+        phaseId={null}
         orgIds={pageOrgIds}
         allowedObjectIds={allowedObjectIds}
-        scopeTitle={
-          topicId === "PTY2-T-TRADE" && phaseId
-            ? (chevrons.find((c) => c.id === phaseId)?.name ?? "环节")
-            : topicId
-              ? (RIGHTS_TOPICS.find((t) => t.id === topicId)?.name ?? "产权")
-              : "全部场景（10）"
-        }
+        scopeTitle={topicId ? (RIGHTS_THEMES.find((t) => t.id === topicId)?.label ?? "产权") : "全部场景（10）"}
         toolbarExtra={
-          topicId === "PTY2-T-TRADE" ? (
-            <div data-testid="rights-trade-flow">
-              <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div data-testid="rights-theme-facts">
+            <RightsThemeFacts topicId={topicId} matters={themeMatters} asOf={filters.asOf} onOpenObject={setObjectId} />
+            {topicId === "PTY2-T-TRADE" ? (
+              <div className="flex flex-wrap items-center gap-2 mt-3" data-testid="rights-trade-filter">
                 <span className="text-[12px] text-textsub">经济行为</span>
                 <select
                   data-testid="rights-behavior-select"
@@ -303,16 +319,11 @@ export default function PropertyDomainView() {
                     </option>
                   ))}
                 </select>
+                {behavior === "free_transfer" && <Tag tone="neutral">无偿划转无价款，不生成价款逾期</Tag>}
+                {behavior === "listed_shares" && <Tag tone="neutral">上市股份模板，不套非上市挂牌</Tag>}
               </div>
-              {behavior === "free_transfer" && <Tag tone="neutral">无偿划转无价款，不生成价款逾期</Tag>}
-              {behavior === "listed_shares" && <Tag tone="neutral">上市股份模板，不套非上市挂牌</Tag>}
-              {behavior !== "all" && template && (
-                <div className="mt-3" data-testid="rights-chevron-flow">
-                  <ChevronFlow items={chevrons} value={phaseId} onChange={setPhaseId} ariaLabel="产权交易监管节点" showStats={false} />
-                </div>
-              )}
-            </div>
-          ) : null
+            ) : null}
+          </div>
         }
         onOpenRisk={setRiskId}
         onOpenObject={setObjectId}
@@ -354,6 +365,71 @@ export default function PropertyDomainView() {
         }}
       />
       <ObjectDrawer objectId={objectId} onClose={() => setObjectId(null)} onOpenRisk={setRiskId} onOpenObject={setObjectId} />
+    </div>
+  );
+}
+
+function RightsThemeFacts({
+  topicId,
+  matters,
+  asOf,
+  onOpenObject,
+}: {
+  topicId: string | null;
+  matters: PropertyMatter[];
+  asOf: string;
+  onOpenObject: (id: string) => void;
+}) {
+  const sample = holdingRowsFor("JV001");
+  const sampleNote = holdingDiffNote(sample);
+  const showHoldings = topicId === "PTY2-T-REG" || topicId === "PTY2-T-CONTROL" || topicId === null;
+  return (
+    <div className="space-y-2 text-[13px]">
+      {topicId === "PTY2-T-IDENTITY" && (
+        <p className="text-textsub">当前样例没有单独的标识办理台账。下方仍按已配置场景展示规则执行结果，不补造应办理数量。</p>
+      )}
+      {topicId === "PTY2-T-CONTROL" && (
+        <p className="text-textsub">持股比例差异只作为待核查线索。专业核查结论以事项和材料为准，不因信息不一致直接定性违规或虚假控股。</p>
+      )}
+      {matters.length > 0 ? (
+        <ul className="space-y-1">
+          {matters.slice(0, 4).map((matter) => {
+            const current = seed.lifecycle_instances.find((item) => item.object_id === matter.id && item.phase_id === matter.current_phase_id);
+            const node = seed.lifecycle_templates
+              .find((item) => item.id === matter.template_id)
+              ?.phase_nodes.find((item) => item.id === matter.current_phase_id);
+            return (
+              <li key={matter.id}>
+                <button type="button" className="text-brand hover:underline" onClick={() => onOpenObject(matter.investee_id)}>
+                  {entityName(matter.investee_id)}
+                </button>
+                <span className="text-textsub">
+                  {" "}
+                  {matter.name}｜{node?.name ?? matter.current_phase_id}
+                  {current?.approved_plan_end ? `｜计划完成 ${current.approved_plan_end}` : ""}
+                  {current?.approved_plan_end && current.approved_plan_end < asOf && !current.actual_end ? "｜计划日已过" : ""}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        topicId !== "PTY2-T-IDENTITY" && <p className="text-textsub">当前主题没有映射到的产权事项台账，场景规则仍按配置目录展示。</p>
+      )}
+      {showHoldings && sample.length > 0 && (
+        <div data-testid="rights-holding-sample">
+          <p className="text-textsub mb-1">{entityName("JV001")}持股来源对照。差异先待核查。</p>
+          <ul className="space-y-1">
+            {sample.map((row) => (
+              <li key={row.id}>
+                {row.source} <span className="num">{row.pct}%</span>
+                <span className="text-textsub">｜生效日 {row.effectiveDate}｜基准日 {row.asOf}</span>
+              </li>
+            ))}
+          </ul>
+          {sampleNote && <p className="text-[12px] text-textsub mt-1">{sampleNote}</p>}
+        </div>
+      )}
     </div>
   );
 }

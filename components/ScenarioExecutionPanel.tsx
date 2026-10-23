@@ -38,6 +38,7 @@ import { useDemoStore } from "@/lib/store";
 import type { DomainId, MonitoringRow, RiskCase } from "@/lib/types";
 import { officialDirectory, scopedDirectory } from "@/lib/fp-directory";
 import { scenarioFitsBehavior } from "@/lib/fp-topics";
+import { faScenarioFacts, ruleBasisLines } from "@/lib/investment-focus";
 import { monitoringNoteLabel, objectTitle, riskTitleOf, ruleDisplayName } from "@/lib/fp-display";
 
 /**
@@ -220,6 +221,7 @@ export default function ScenarioExecutionPanel({
   const [objectTypeFilter, setObjectTypeFilter] = useState("all");
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [openRowId, setOpenRowId] = useState<string | null>(null);
+  const [ruleBasisId, setRuleBasisId] = useState<string | null>(null);
 
   const baseScope: ScopeFilter = useMemo(
     () => ({
@@ -466,6 +468,7 @@ export default function ScenarioExecutionPanel({
   scenarioRef.current = visibleScenarioRows;
   React.useEffect(() => {
     setDetail(null);
+    setRuleBasisId(null);
     if (!expandRules || !phaseId) {
       setOpenRowId(null);
       return;
@@ -794,6 +797,17 @@ export default function ScenarioExecutionPanel({
                                       : "当前子场景没有可列出的监测规则"}
                                   </span>
                                 )}
+                                {expandRules && domain === "FA" && (
+                                  <span className="block text-[12px] text-textmain mt-1 break-words leading-5" data-testid={`scenario-facts-${r.id}`}>
+                                    {faScenarioFacts(
+                                      r.id,
+                                      [...new Set(r.rows.map((record) => record.monitoring_object_id))],
+                                      filters.asOf,
+                                      orgIds,
+                                      allowedObjectIds,
+                                    ) ?? "本场景当前没有可汇总的业务监测值。"}
+                                  </span>
+                                )}
                               </button>
                             </td>
                             <td className="px-3 py-2 align-top">
@@ -899,8 +913,17 @@ export default function ScenarioExecutionPanel({
                                         </thead>
                                         <tbody>
                                           {lines.map((line) => (
-                                            <tr key={line.id} className="border-t border-line align-top">
-                                              <td className="px-2 py-2 num whitespace-nowrap">{line.id}</td>
+                                            <React.Fragment key={line.id}>
+                                            <tr className="border-t border-line align-top">
+                                              <td className="px-2 py-2 num whitespace-nowrap">
+                                                <button
+                                                  type="button"
+                                                  className="text-brand hover:underline"
+                                                  onClick={() => setRuleBasisId((current) => (current === `${r.id}:${line.id}` ? null : `${r.id}:${line.id}`))}
+                                                >
+                                                  {line.id}
+                                                </button>
+                                              </td>
                                               <td className="px-2 py-2">{line.name}</td>
                                               <td className="px-2 py-2"><Tag tone={line.statusTone}>{line.statusLabel}</Tag></td>
                                               <td className="px-2 py-2 text-right num">{line.required === null ? "—" : line.required}</td>
@@ -942,6 +965,19 @@ export default function ScenarioExecutionPanel({
                                                 )}
                                               </td>
                                             </tr>
+                                            {ruleBasisId === `${r.id}:${line.id}` && (
+                                              <tr className="bg-white">
+                                                <td colSpan={7} className="px-2 py-2 text-[12px] text-textsub leading-5" data-testid={`rule-basis-${line.id}`}>
+                                                  {ruleBasisLines(
+                                                    line.id,
+                                                    [...new Set(r.rows.map((record) => record.monitoring_object_id))],
+                                                  ).map((text) => (
+                                                    <p key={text}>{text}</p>
+                                                  ))}
+                                                </td>
+                                              </tr>
+                                            )}
+                                            </React.Fragment>
                                           ))}
                                         </tbody>
                                       </table>

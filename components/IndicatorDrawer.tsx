@@ -28,6 +28,7 @@ import { catalogIndicatorMeta } from "@/lib/live-config";
 import { categoryIdOf, computeTrendPoints, eligibleTrendPoints, trendSpecOf } from "@/lib/fp-trend";
 import { DetailTrend } from "@/components/fp/MetricTrend";
 import { isPropertyCensusIndicator } from "@/lib/fp-catalog";
+import { MAJOR_PROJECT_CALIBER, majorProjectIds } from "@/lib/investment-focus";
 
 function statusTag(m: NodeMetric) {
   switch (m.status) {
@@ -133,6 +134,7 @@ function IndicatorDrawerBody({
   const [anchorOrgId, setAnchorOrgId] = useState(initialOrgId);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(descendantOrgIds(initialOrgId)));
   const [onlyAbnormal, setOnlyAbnormal] = useState(false);
+  const [majorOnly, setMajorOnly] = useState(true);
   const [traceLeafId, setTraceLeafId] = useState<string | null>(null);
 
   const openObject = (id: string, tab?: string) => onOpenObject?.(id, tab);
@@ -185,6 +187,12 @@ function IndicatorDrawerBody({
   const priorScopedLeaves = useMemo(
     () => (indicator ? scopedIndicatorLeaves(indicatorLeaves(indicator, priorCtx), dataOrgIds) : []),
     [indicator, priorCtx, dataOrgIds],
+  );
+  const majorIds = useMemo(() => majorProjectIds(), []);
+  const projectFocus = Boolean(indicator && indicator.domain === "FA" && indicator.leafObjectType === "fixed_asset_project");
+  const listedLeaves = useMemo(
+    () => (projectFocus && majorOnly ? scopedLeaves.filter((leaf) => majorIds.has(leaf.objectId)) : scopedLeaves),
+    [projectFocus, majorOnly, scopedLeaves, majorIds],
   );
   const leafOrgIds = useMemo(() => new Set(scopedLeaves.map((l) => l.orgId)), [scopedLeaves]);
   const applicableLeafIds = useMemo(
@@ -322,7 +330,7 @@ function IndicatorDrawerBody({
             metric: nodeMetric(c.id),
             isOrg: true,
           })),
-          ...scopedLeaves
+          ...listedLeaves
             .filter((l) => l.orgId === resolved.id && !isOrgMirrorLeaf(l))
             .map((l) => ({
               id: l.objectId,
@@ -335,6 +343,8 @@ function IndicatorDrawerBody({
       : [];
 
   const detailLeaves = resolved.kind === "org" ? selectedMetric.leaves : selectedLeaf ? [selectedLeaf] : [];
+  const displayDetailLeaves =
+    projectFocus && majorOnly ? detailLeaves.filter((leaf) => majorIds.has(leaf.objectId)) : detailLeaves;
   const relatedIds = relatedMatterIds(detailLeaves);
 
   const target = indicator.target ?? null;
@@ -354,7 +364,7 @@ function IndicatorDrawerBody({
     if (!org || !dataOrgIds.has(orgId)) return null;
     if (onlyAbnormal && !keepOrgIds.has(orgId)) return null;
     const kids = drawerChildOrgs(orgId, initialOrgId, includeChildren, dataOrgIds, leafOrgIds);
-    const leaves = scopedLeaves.filter((l) => l.orgId === orgId && !isOrgMirrorLeaf(l));
+    const leaves = listedLeaves.filter((l) => l.orgId === orgId && !isOrgMirrorLeaf(l));
     const metric = nodeMetric(orgId);
     const priorM = nodeMetricPrior(orgId);
     const yoy = formatYoyShort(indicator, metric, priorM);
@@ -527,7 +537,7 @@ function IndicatorDrawerBody({
     >
       <div className="h-full flex min-h-0">
         <aside className="w-[30%] min-w-[280px] max-w-[380px] border-r border-line bg-[#f7f9fd] flex flex-col min-h-0">
-          <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-2">
+          <div className="px-4 py-2.5 border-b border-line flex items-center justify-between gap-2 flex-wrap">
             <span className="text-[13px] font-medium text-textmain">组织及对象穿透</span>
             <label className="flex items-center gap-1 text-[12px] text-textsub cursor-pointer">
               <input
@@ -538,7 +548,23 @@ function IndicatorDrawerBody({
               />
               只看异常
             </label>
+            {projectFocus && (
+              <label className="flex items-center gap-1 text-[12px] text-textsub cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={majorOnly}
+                  onChange={(e) => setMajorOnly(e.target.checked)}
+                  data-testid="major-project-only"
+                />
+                只看重大投资项目
+              </label>
+            )}
           </div>
+          {projectFocus && (
+            <div className="px-4 py-1.5 border-b border-line text-[11px] text-textsub leading-4" data-testid="major-project-caliber">
+              {MAJOR_PROJECT_CALIBER}
+            </div>
+          )}
           <div className="px-4 py-1.5 border-b border-line text-[11px] text-textsub leading-4">
             取数范围为授权范围 ∩ 当前筛选；海油工程总部—二级单位—三级单位—{objectTypeLabel[indicator.leafObjectType] ?? "末端对象"}；
             缺层按真实管理关系跳过。祖先路径仅展示，点击不会扩大范围。
@@ -740,16 +766,20 @@ function IndicatorDrawerBody({
               <div className="px-4 py-2.5 border-b border-line text-[14px] font-medium flex items-center justify-between">
                 <span>指标构成与业务明细</span>
                 <span className="text-[12px] text-textsub" data-detail-count>
-                  共 {detailLeaves.length} 个对象，按对象 ID 去重
+                  {projectFocus && majorOnly
+                    ? `重大投资项目 ${displayDetailLeaves.length} 个；指标仍按全部适用对象汇总`
+                    : `共 ${detailLeaves.length} 个对象，按对象 ID 去重`}
                 </span>
               </div>
-              {detailLeaves.length === 0 ? (
+              {displayDetailLeaves.length === 0 ? (
                 <div className="px-4 py-8 text-center text-[13px] text-textsub">
-                  当前范围无业务，不显示 0% 或正常绿灯
+                  {projectFocus && majorOnly && detailLeaves.length > 0
+                    ? "当前节点没有重大投资项目。取消“只看重大投资项目”后可查看其余项目。"
+                    : "当前范围无业务，不显示 0% 或正常绿灯"}
                 </div>
               ) : (
                 <div className="divide-y divide-[var(--border)]">
-                  {detailLeaves.map((leaf) => (
+                  {displayDetailLeaves.map((leaf) => (
                     <div key={leaf.objectId} className="px-4 py-3">
                       <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -794,6 +824,20 @@ function IndicatorDrawerBody({
                           </div>
                         ))}
                       </div>
+                      {leaf.objectType === "asset" && (
+                        <div className="mt-2">
+                          {(() => {
+                            const source = seed.assets.find((asset) => asset.id === leaf.objectId)?.source_project_id;
+                            const project = source ? seed.fixed_asset_projects.find((item) => item.id === source) : undefined;
+                            if (!project) return null;
+                            return (
+                              <LinkButton onClick={() => openObject(project.id)}>
+                                关联投资项目 {project.name}
+                              </LinkButton>
+                            );
+                          })()}
+                        </div>
+                      )}
                       <div className="mt-2 flex items-center gap-3 flex-wrap">
                         <LinkButton onClick={() => openLeaf(leaf)}>
                           {leaf.objectType === "risk_case" ? "查看事项详情" : "查看对象档案"}

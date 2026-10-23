@@ -443,19 +443,12 @@ export default function Page() {
         ],
       }}
       ledger={(h) => <ProjectLedger helpers={h} />}
-      tabs={[
-        { id: "asset", label: "资产运营监管", render: (h) => <AssetOperation helpers={h} /> },
-        {
-          id: "project",
-          label: "项目穿透",
-          render: (h) => (
-            <div className="space-y-4">
-              <ProjectLedger helpers={h} />
-              <TransferLedger />
-            </div>
-          ),
-        },
-      ]}
+      executionExtras={({ phaseId, subtopicId, helpers }) => (
+        <>
+          {phaseId === "FA-V12-08" && subtopicId === "operation" && <AssetOperation helpers={helpers} />}
+          {phaseId === "FA-V12-07" && <TransferLedger />}
+        </>
+      )}
     />
   );
 }

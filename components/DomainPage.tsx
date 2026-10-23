@@ -77,6 +77,7 @@ export default function DomainPage({
   subtopicByPhase,
   tabs = [],
   ledger,
+  executionExtras,
 }: {
   domain: DomainId;
   kpiIndicatorIds: string[];
@@ -85,10 +86,12 @@ export default function DomainPage({
   subtopicByPhase?: Record<string, SubtopicOption[]>;
   tabs?: DomainTab[];
   ledger?: (helpers: DomainHelpers) => React.ReactNode;
+  executionExtras?: (ctx: { phaseId: string | null; subtopicId: string | null; helpers: DomainHelpers }) => React.ReactNode;
 }) {
   const meta = DOMAIN_META[domain];
   const { filters, risks, user, canAct, catalog } = useDemoStore();
   const [tab, setTab] = useState("overview");
+  const [extraPanel, setExtraPanel] = useState<null | "ledger" | "cases">(null);
   const [phaseId, setPhaseId] = useState<string | null>(null);
   const [topicId, setTopicId] = useState<string | null>(null);
   const [subtopicId, setSubtopicId] = useState<string | null>(null);
@@ -236,7 +239,8 @@ export default function DomainPage({
         <button
           className="text-[13px] text-brand hover:underline"
           onClick={() => {
-            setTab("cases");
+            if (lifecycleHome) setExtraPanel("cases");
+            else setTab("cases");
             setRiskFilter("open");
           }}
         >
@@ -280,9 +284,9 @@ export default function DomainPage({
         <FilterBar />
       </PageHeader>
 
-      <Tabs tabs={allTabs} value={tab} onChange={setTab} />
+      {!lifecycleHome && <Tabs tabs={allTabs} value={tab} onChange={setTab} />}
 
-      {tab === "overview" && (
+      {(lifecycleHome || tab === "overview") && (
         <div className="space-y-4">
           <div className="reg-kpis-domain">
             {shownKpiDefs.map((def) => {
@@ -451,13 +455,37 @@ export default function DomainPage({
             expandRules={lifecycleHome}
           />
 
+          {lifecycleHome && (
+            <div className="flex flex-wrap gap-2" data-testid="fa-inline-entries">
+              <button
+                type="button"
+                data-testid="fa-open-ledger"
+                className={`h-8 px-3 rounded-[6px] border text-[13px] ${extraPanel === "ledger" ? "border-brand bg-tint text-brand" : "border-line bg-surface text-textsub"}`}
+                onClick={() => setExtraPanel((current) => (current === "ledger" ? null : "ledger"))}
+              >
+                投资项目台账
+              </button>
+              <button
+                type="button"
+                data-testid="fa-open-cases"
+                className={`h-8 px-3 rounded-[6px] border text-[13px] ${extraPanel === "cases" ? "border-brand bg-tint text-brand" : "border-line bg-surface text-textsub"}`}
+                onClick={() => setExtraPanel((current) => (current === "cases" ? null : "cases"))}
+              >
+                监管事项
+              </button>
+            </div>
+          )}
+
+          {lifecycleHome && extraPanel === "ledger" && ledger?.(helpers)}
+          {lifecycleHome && executionExtras?.({ phaseId, subtopicId: effectiveSubtopic, helpers })}
+
           {!lifecycleHome && ledger?.(helpers)}
         </div>
       )}
 
-      {tabs.map((t) => (tab === t.id ? <div key={t.id}>{t.render(helpers)}</div> : null))}
+      {!lifecycleHome && tabs.map((t) => (tab === t.id ? <div key={t.id}>{t.render(helpers)}</div> : null))}
 
-      {tab === "cases" && (
+      {(tab === "cases" || (lifecycleHome && extraPanel === "cases")) && (
         <div className="space-y-4">
         {lifecycleHome && focusList}
         <Card
