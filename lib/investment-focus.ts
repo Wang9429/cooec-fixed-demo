@@ -1150,7 +1150,7 @@ export function faScenarioMonitor(query: FaMonitorQuery): FaScenarioMonitor {
         const project = projectOf(link.id);
         if (!project) return [];
         return [project.acceptance_date, project.ready_for_use_date, project.capitalization_date].filter(
-          (value): value is string => Boolean(value) && value <= query.asOf,
+          (value): value is string => typeof value === "string" && value <= query.asOf,
         );
       })
     : [];
