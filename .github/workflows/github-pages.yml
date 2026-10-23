@@ -24,7 +24,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: bash scripts/build-github-pages.sh
+      - name: Build static export for cooec-fixed-demo
+        run: bash scripts/build-github-pages.sh
+        env:
+          PAGES_BASE_PATH: /cooec-fixed-demo
       - name: Publish gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
