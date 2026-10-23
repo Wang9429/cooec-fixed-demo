@@ -1,0 +1,134 @@
+{
+  "funds": "11/11",
+  "property": "10/10",
+  "funds_items": [
+    {
+      "id": "CASH2-P01",
+      "name": "违反决策和审批程序筹集和使用资金",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "CASH2-P02",
+      "name": "超越权限筹集和使用资金",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "CASH2-P03",
+      "name": "设立“小金库”",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "CASH2-P04",
+      "name": "违反规定集资、发行股票或债券、捐赠、担保、委托理财、拆借资金或开立信用证、办理银行票据等",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "CASH2-P05",
+      "name": "虚列支出套取资金",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "CASH2-P06",
+      "name": "违反规定自定薪酬，超发、滥发职工薪酬福利",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "CASH2-P07",
+      "name": "因财务内控缺失或未按照财务内控制度执行，发生资金挪用、侵占、盗取、欺诈等",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "CASH2-P08",
+      "name": "违规出借资金",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "CASH2-P09",
+      "name": "未按规定对有关专项资金实行专户管理和使用",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "CASH2-P10",
+      "name": "中小企业账款拖欠",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "CASH2-P11",
+      "name": "核心业务持续亏损",
+      "visible": true,
+      "expandable": true
+    }
+  ],
+  "property_items": [
+    {
+      "id": "PTY2-P01",
+      "name": "未按规定履行决策和审批程序转让、划转国有产权",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "PTY2-P02",
+      "name": "超越授权范围转让、划转国有产权",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "PTY2-P03",
+      "name": "财务审计和资产评估违反相关规定",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "PTY2-P04",
+      "name": "隐匿应当纳入审计、评估范围的资产，组织提供和披露虚假信息，授意、指使中介机构出具虚假财务审计、资产评估鉴证结果及法律意见书等",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "PTY2-P05",
+      "name": "未按相关规定执行回避制度",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "PTY2-P06",
+      "name": "违反相关规定和公开公平交易原则，低价转让企业产权、上市公司股权和资产等",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "PTY2-P07",
+      "name": "违反规定进行国有资产交易流转",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "PTY2-P08",
+      "name": "未按规定履行国有股东标识管理程序，违规管理国有企业名称、企业名称中的字号，违规使用企业许可证件、资质证明文件",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "PTY2-P09",
+      "name": "未按规定办理国家出资企业产权登记，违反规定使用国有资产产权登记证（表）",
+      "visible": true,
+      "expandable": true
+    },
+    {
+      "id": "PTY2-P10",
+      "name": "违反规定代持股权、虚假控股、控股不控权、虚假合资、挂靠经营等",
+      "visible": true,
+      "expandable": true
+    }
+  ]
+}

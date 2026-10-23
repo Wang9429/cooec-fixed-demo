@@ -1,0 +1,1079 @@
+{
+  "version": "FP-20260917-R3.2",
+  "commit": "345bec9",
+  "generated_from": "live catalog + trialRule + seed evaluations",
+  "coverage_plan_json_not_imported": true,
+  "funds": "11/11",
+  "property": "10/10",
+  "complete": true,
+  "enabled_official_count": 23,
+  "records": [
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P01",
+      "primary_name": "违反决策和审批程序筹集和使用资金",
+      "sub_id": "CASH2-S040",
+      "sub_name": "企业账户开立缺少适用审批",
+      "rule_id": "CASH2-R040",
+      "effective_version": "FP-R3-1",
+      "execution_mode": "规则辅助人工",
+      "published": true,
+      "executable": true,
+      "object_id": "ACC-B",
+      "object_name": "账户 ACC-B",
+      "basis": "需事前审批且检索完整；开户2025-06-08，有效批准缺失",
+      "evidence": "ACC-B 开户审批检索",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {
+        "opened_on": "2025-06-08",
+        "approval_on": null
+      }
+    },
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P02",
+      "primary_name": "超越权限筹集和使用资金",
+      "sub_id": "CASH2-S039",
+      "sub_name": "实付超过该笔有效批准金额",
+      "rule_id": "CASH2-R039",
+      "effective_version": "FP-R2-1",
+      "execution_mode": "可结构化执行",
+      "published": true,
+      "executable": true,
+      "object_id": "P-PAY001",
+      "object_name": "付款 P-PAY001",
+      "basis": "实付1200 − 该笔有效批准800 = 400；货币精度容差0万元；无有效批准变更；业务上限2000",
+      "evidence": "执行器输入与样例材料",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {
+        "actual": 1200,
+        "approved": 800,
+        "limit": 2000,
+        "over": 400,
+        "overCert": -800,
+        "amount_tolerance_wan": 0,
+        "amount_tolerance_input": 0,
+        "amount_tolerance_clamped": false,
+        "amount_tolerance_unit": "万元",
+        "approval_change": false
+      }
+    },
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P03",
+      "primary_name": "设立“小金库”",
+      "sub_id": "CASH2-S006",
+      "sub_name": "银行确认账户未纳入企业账户台账",
+      "rule_id": "CASH2-R006",
+      "effective_version": "FP-R32-1",
+      "execution_mode": "规则辅助人工",
+      "published": true,
+      "executable": true,
+      "object_id": "BANK-LE-A",
+      "object_name": "法人 LE-A 银行确认清单",
+      "basis": "同主体同基准日2026-06-30银行确认账户与企业台账一致",
+      "evidence": "LE-A 银行确认账户清单",
+      "result_code": "clear",
+      "result": "已完成核验、未命中",
+      "monitoring_status": "evaluated_clear",
+      "professional_task": "",
+      "inputs": {
+        "bank": [
+          "ACC-A"
+        ],
+        "ledger": [
+          "ACC-A"
+        ],
+        "as_of": "2026-06-30"
+      }
+    },
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P04",
+      "primary_name": "违反规定集资、发行股票或债券、捐赠、担保、委托理财、拆借资金或开立信用证、办理银行票据等",
+      "sub_id": "CASH2-S012",
+      "sub_name": "担保实施超出已批准担保额度",
+      "rule_id": "CASH2-R012",
+      "effective_version": "FP-R3-1",
+      "execution_mode": "可结构化执行",
+      "published": true,
+      "executable": true,
+      "object_id": "GUAR-01",
+      "object_name": "担保 GUAR-01",
+      "basis": "被担保对象JV001有效占用3000 > 批准额度2000（同一被担保对象有效占用，按责任金额）",
+      "evidence": "被投企业A担保额度占用",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {
+        "occupancy": 3000,
+        "limit": 2000,
+        "beneficiary": "JV001"
+      }
+    },
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P05",
+      "primary_name": "虚列支出套取资金",
+      "sub_id": "CASH2-S017",
+      "sub_name": "同一费用凭据重复形成有效支付",
+      "rule_id": "CASH2-R017",
+      "effective_version": "FP-R32-1",
+      "execution_mode": "规则辅助人工",
+      "published": true,
+      "executable": true,
+      "object_id": "VCH-001",
+      "object_name": "费用凭据 VCH-001",
+      "basis": "同一凭据有效累计报支80 ≤ 可报80（合法分摊）",
+      "evidence": "费用凭据 FP-INV-2026-0418 分摊与付款",
+      "result_code": "clear",
+      "result": "已完成核验、未命中",
+      "monitoring_status": "evaluated_clear",
+      "professional_task": "",
+      "inputs": {
+        "paid": 80,
+        "claimable": 80,
+        "voucher": "FP-INV-2026-0418"
+      }
+    },
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P06",
+      "primary_name": "违反规定自定薪酬，超发、滥发职工薪酬福利",
+      "sub_id": "CASH2-S020",
+      "sub_name": "薪酬标准调整缺少有效批准",
+      "rule_id": "CASH2-R020",
+      "effective_version": "FP-R32-1",
+      "execution_mode": "规则辅助人工",
+      "published": true,
+      "executable": true,
+      "object_id": "SAL-ADJ-OK",
+      "object_name": "薪酬调整 SAL-ADJ-OK",
+      "basis": "批准2026-03-18早于生效2026-04-01，范围脱敏岗位 P-ENG-01～P-ENG-12",
+      "evidence": "薪酬标准调整批准",
+      "result_code": "clear",
+      "result": "已完成核验、未命中",
+      "monitoring_status": "evaluated_clear",
+      "professional_task": "",
+      "inputs": {
+        "approval_on": "2026-03-18",
+        "effective_on": "2026-04-01",
+        "scope": "脱敏岗位 P-ENG-01～P-ENG-12"
+      }
+    },
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P07",
+      "primary_name": "因财务内控缺失或未按照财务内控制度执行，发生资金挪用、侵占、盗取、欺诈等",
+      "sub_id": "CASH2-S024",
+      "sub_name": "收款账户变更未经独立核验即付款",
+      "rule_id": "CASH2-R024",
+      "effective_version": "FP-R2-1",
+      "execution_mode": "可结构化执行",
+      "published": true,
+      "executable": true,
+      "object_id": "P-FP-ACCCHG",
+      "object_name": "付款 P-FP-ACCCHG",
+      "basis": "变更2026-06-01后首次付款2026-06-08，独立核验缺失",
+      "evidence": "收款账户变更记录",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {
+        "change": "2026-06-01",
+        "pay": "2026-06-08",
+        "review": null
+      }
+    },
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P08",
+      "primary_name": "违规出借资金",
+      "sub_id": "CASH2-S029",
+      "sub_name": "出借资金到期未回收",
+      "rule_id": "CASH2-R029",
+      "effective_version": "FP-R3-1",
+      "execution_mode": "可结构化执行",
+      "published": true,
+      "executable": true,
+      "object_id": "LEND-01",
+      "object_name": "出借 LEND-01",
+      "basis": "到期2026-05-31未收回本金600万元（本金600−回收0）",
+      "evidence": "出借LEND-01到期回收",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {
+        "due": "2026-05-31",
+        "outstanding": 600,
+        "recovered": 0,
+        "overdue": 600,
+        "borrower": "JV001"
+      }
+    },
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P09",
+      "primary_name": "未按规定对有关专项资金实行专户管理和使用",
+      "sub_id": "CASH2-S031",
+      "sub_name": "专项资金支出用途超出批准范围",
+      "rule_id": "CASH2-R031",
+      "effective_version": "FP-R2-1",
+      "execution_mode": "规则辅助人工",
+      "published": true,
+      "executable": true,
+      "object_id": "P-FP-SPEC",
+      "object_name": "专项支出 P-FP-SPEC",
+      "basis": "用途「业务招待」不在 培训/教材/实训设备 且无调整批准",
+      "evidence": "专项支出用途对照",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {
+        "purpose": "业务招待",
+        "catalog": [
+          "培训",
+          "教材",
+          "实训设备"
+        ]
+      }
+    },
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P10",
+      "primary_name": "中小企业账款拖欠",
+      "sub_id": "CASH2-S033",
+      "sub_name": "中小企业无争议到期账款未付",
+      "rule_id": "CASH2-R033",
+      "effective_version": "FP-R2-1",
+      "execution_mode": "规则辅助人工",
+      "published": true,
+      "executable": true,
+      "object_id": "SME-01",
+      "object_name": "账款 SME-01",
+      "basis": "起算验收合格 2026-03-21 + 合同60日 → 到期2026-05-20；无争议未付90",
+      "evidence": "执行器输入与样例材料",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "",
+      "professional_task": "",
+      "inputs": {
+        "due": "2026-05-20",
+        "unpaid": 90,
+        "start": "2026-03-21",
+        "days": 60
+      }
+    },
+    {
+      "domain": "资金",
+      "primary_id": "CASH2-P11",
+      "primary_name": "核心业务持续亏损",
+      "sub_id": "CASH2-S035",
+      "sub_name": "核心业务连续期间经营亏损",
+      "rule_id": "CASH2-R035",
+      "effective_version": "FP-R2-1",
+      "execution_mode": "规则辅助人工",
+      "published": true,
+      "executable": true,
+      "object_id": "SEG-A-EPCI-2026Q2",
+      "object_name": "海洋工程总承包",
+      "basis": "未达连续亏损条件",
+      "evidence": "核心业务分部利润",
+      "result_code": "clear",
+      "result": "已完成核验、未命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {}
+    },
+    {
+      "domain": "产权",
+      "primary_id": "PTY2-P01",
+      "primary_name": "未按规定履行决策和审批程序转让、划转国有产权",
+      "sub_id": "PTY2-S003",
+      "sub_name": "决策审批迟于规定实施节点",
+      "rule_id": "PTY2-R003",
+      "effective_version": "FP-R32-1",
+      "execution_mode": "可结构化执行",
+      "published": true,
+      "executable": true,
+      "object_id": "PTY-M002",
+      "object_name": "事项 PTY-M002",
+      "basis": "批准2026-01-28早于前置节点「合同签署」2026-03-01",
+      "evidence": "PTY-M002 决策批准与实施节点时间线",
+      "result_code": "clear",
+      "result": "已完成核验、未命中",
+      "monitoring_status": "evaluated_clear",
+      "professional_task": "",
+      "inputs": {
+        "approval_on": "2026-01-28",
+        "gate_on": "2026-03-01",
+        "behavior": "nonlisted_transfer"
+      }
+    },
+    {
+      "domain": "产权",
+      "primary_id": "PTY2-P02",
+      "primary_name": "超越授权范围转让、划转国有产权",
+      "sub_id": "PTY2-S006",
+      "sub_name": "交易规模超过授权权限边界",
+      "rule_id": "PTY2-R006",
+      "effective_version": "FP-R2-1",
+      "execution_mode": "可结构化执行",
+      "published": true,
+      "executable": true,
+      "object_id": "PTY-M007",
+      "object_name": "事项 PTY-M007",
+      "basis": "拟转让15个百分点 > 授权10个百分点，无上收审批",
+      "evidence": "授权额度与拟转让规模",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {
+        "authorized_pp": 10,
+        "proposed_pp": 15
+      }
+    },
+    {
+      "domain": "产权",
+      "primary_id": "PTY2-P03",
+      "primary_name": "财务审计和资产评估违反相关规定",
+      "sub_id": "PTY2-S035",
+      "sub_name": "报告超过适用有效使用期限",
+      "rule_id": "PTY2-R035",
+      "effective_version": "FP-R2-1",
+      "execution_mode": "可结构化执行",
+      "published": true,
+      "executable": true,
+      "object_id": "PTY-M008",
+      "object_name": "事项 PTY-M008",
+      "basis": "使用2026-04-10 > 有效至2025-12-01",
+      "evidence": "评估报告有效期",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {
+        "used_on": "2026-04-10",
+        "valid_until": "2025-12-01"
+      }
+    },
+    {
+      "domain": "产权",
+      "primary_id": "PTY2-P04",
+      "primary_name": "隐匿应当纳入审计、评估范围的资产，组织提供和披露虚假信息，授意、指使中介机构出具虚假财务审计、资产评估鉴证结果及法律意见书等",
+      "sub_id": "PTY2-S011",
+      "sub_name": "应纳入审计评估的资产疑似漏列",
+      "rule_id": "PTY2-R011",
+      "effective_version": "FP-R2-1",
+      "execution_mode": "专业核查",
+      "published": true,
+      "executable": true,
+      "object_id": "PTY-M002",
+      "object_name": "事项 PTY-M002",
+      "basis": "专业核查：应覆盖范围与评估清单一致（含合法剥离），待人工确认结论",
+      "evidence": "执行器输入与样例材料",
+      "result_code": "data_insufficient",
+      "result": "材料不足或待专业核查（不记已评估0命中）",
+      "monitoring_status": "reference_only",
+      "professional_task": "打开资产范围与评估清单材料，认领专业核查并记录结论（不自动认定隐匿）",
+      "inputs": {
+        "count": 3,
+        "suspect": []
+      }
+    },
+    {
+      "domain": "产权",
+      "primary_id": "PTY2-P05",
+      "primary_name": "未按相关规定执行回避制度",
+      "sub_id": "PTY2-S014",
+      "sub_name": "应回避的决策人员参与表决",
+      "rule_id": "PTY2-R014",
+      "effective_version": "FP-R32-1",
+      "execution_mode": "规则辅助人工",
+      "published": true,
+      "executable": true,
+      "object_id": "PTY-M002",
+      "object_name": "事项 PTY-M002",
+      "basis": "应回避人员DIR-A-03已申报且未参与表决",
+      "evidence": "PTY-M002 回避申报与表决记录",
+      "result_code": "clear",
+      "result": "已完成核验、未命中",
+      "monitoring_status": "evaluated_clear",
+      "professional_task": "",
+      "inputs": {
+        "person": "DIR-A-03",
+        "declared": true,
+        "voted": false
+      }
+    },
+    {
+      "domain": "产权",
+      "primary_id": "PTY2-P06",
+      "primary_name": "违反相关规定和公开公平交易原则，低价转让企业产权、上市公司股权和资产等",
+      "sub_id": "PTY2-S016",
+      "sub_name": "非上市产权或资产定价依据偏离",
+      "rule_id": "PTY2-R016",
+      "effective_version": "FP-R32-1",
+      "execution_mode": "可结构化执行",
+      "published": true,
+      "executable": true,
+      "object_id": "PTY-M002",
+      "object_name": "事项 PTY-M002",
+      "basis": "成交800对照备案评估结果800／底价800",
+      "evidence": "PTY-M002 非上市定价依据",
+      "result_code": "clear",
+      "result": "已完成核验、未命中",
+      "monitoring_status": "evaluated_clear",
+      "professional_task": "",
+      "inputs": {
+        "deal": 800,
+        "basis": 800,
+        "floor": 800
+      }
+    },
+    {
+      "domain": "产权",
+      "primary_id": "PTY2-P07",
+      "primary_name": "违反规定进行国有资产交易流转",
+      "sub_id": "PTY2-S037",
+      "sub_name": "到期转让价款尚未足额收取",
+      "rule_id": "PTY2-R037",
+      "effective_version": "FP-R32-1",
+      "execution_mode": "可结构化执行",
+      "published": true,
+      "executable": true,
+      "object_id": "PTY-M002",
+      "object_name": "事项 PTY-M002",
+      "basis": "到期2026-06-30应收800−已核实到账480=未收320（义务OB-PTY-XFER）",
+      "evidence": "PTY-M002 转让价款到账",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {
+        "due_wan": 800,
+        "received_wan": 480,
+        "unpaid": 320,
+        "due_date": "2026-06-30",
+        "obligation_id": "OB-PTY-XFER"
+      }
+    },
+    {
+      "domain": "产权",
+      "primary_id": "PTY2-P08",
+      "primary_name": "未按规定履行国有股东标识管理程序，违规管理国有企业名称、企业名称中的字号，违规使用企业许可证件、资质证明文件",
+      "sub_id": "PTY2-S038",
+      "sub_name": "失效许可证件资质仍被使用",
+      "rule_id": "PTY2-R038",
+      "effective_version": "FP-R32-1",
+      "execution_mode": "规则辅助人工",
+      "published": true,
+      "executable": true,
+      "object_id": "PTY-M012",
+      "object_name": "事项 PTY-M012",
+      "basis": "证件海工许〔2025〕18号使用2026-06-12在有效期内（至2027-12-31）",
+      "evidence": "LE-A 许可证件核验",
+      "result_code": "clear",
+      "result": "已完成核验、未命中",
+      "monitoring_status": "evaluated_clear",
+      "professional_task": "",
+      "inputs": {
+        "used_on": "2026-06-12",
+        "valid_until": "2027-12-31",
+        "permit": "海工许〔2025〕18号"
+      }
+    },
+    {
+      "domain": "产权",
+      "primary_id": "PTY2-P09",
+      "primary_name": "未按规定办理国家出资企业产权登记，违反规定使用国有资产产权登记证（表）",
+      "sub_id": "PTY2-S028",
+      "sub_name": "产权变动登记逾期未办理",
+      "rule_id": "PTY2-R028",
+      "effective_version": "FP-R2-1",
+      "execution_mode": "可结构化执行",
+      "published": true,
+      "executable": true,
+      "object_id": "PTY-M009",
+      "object_name": "事项 PTY-M009",
+      "basis": "应办至2026-03-31仍未申报",
+      "evidence": "变动登记义务",
+      "result_code": "hit",
+      "result": "命中",
+      "monitoring_status": "evaluated_hit",
+      "professional_task": "",
+      "inputs": {
+        "due": "2026-03-31",
+        "filed": null
+      }
+    },
+    {
+      "domain": "产权",
+      "primary_id": "PTY2-P10",
+      "primary_name": "违反规定代持股权、虚假控股、控股不控权、虚假合资、挂靠经营等",
+      "sub_id": "PTY2-S032",
+      "sub_name": "控股权利未有效行使风险",
+      "rule_id": "PTY2-R032",
+      "effective_version": "FP-R2-1",
+      "execution_mode": "专业核查",
+      "published": true,
+      "executable": true,
+      "object_id": "LE-CTRL",
+      "object_name": "法人 LE-CTRL",
+      "basis": "专业核查：章程董事会5席、控股应派3席、实际到任2席；不自动判定为控制失效或已控权",
+      "evidence": "执行器输入与样例材料",
+      "result_code": "data_insufficient",
+      "result": "材料不足或待专业核查（不记已评估0命中）",
+      "monitoring_status": "reference_only",
+      "professional_task": "打开章程、任免与到任材料，认领专业核查并记录结论（不自动判定控制失效）",
+      "inputs": {
+        "charter_board_seats": 5,
+        "appointed_seats": 2,
+        "should_appoint": 3,
+        "blocked": true
+      }
+    }
+  ],
+  "ui_visibility": {
+    "funds": [
+      {
+        "primary_id": "CASH2-P01",
+        "primary_name": "违反决策和审批程序筹集和使用资金",
+        "sub_id": "CASH2-S040",
+        "visible": true
+      },
+      {
+        "primary_id": "CASH2-P02",
+        "primary_name": "超越权限筹集和使用资金",
+        "sub_id": "CASH2-S039",
+        "visible": true
+      },
+      {
+        "primary_id": "CASH2-P03",
+        "primary_name": "设立“小金库”",
+        "sub_id": "CASH2-S006",
+        "visible": true
+      },
+      {
+        "primary_id": "CASH2-P04",
+        "primary_name": "违反规定集资、发行股票或债券、捐赠、担保、委托理财、拆借资金或开立信用证、办理银行票据等",
+        "sub_id": "CASH2-S012",
+        "visible": true
+      },
+      {
+        "primary_id": "CASH2-P05",
+        "primary_name": "虚列支出套取资金",
+        "sub_id": "CASH2-S017",
+        "visible": true
+      },
+      {
+        "primary_id": "CASH2-P06",
+        "primary_name": "违反规定自定薪酬，超发、滥发职工薪酬福利",
+        "sub_id": "CASH2-S020",
+        "visible": true
+      },
+      {
+        "primary_id": "CASH2-P07",
+        "primary_name": "因财务内控缺失或未按照财务内控制度执行，发生资金挪用、侵占、盗取、欺诈等",
+        "sub_id": "CASH2-S024",
+        "visible": true
+      },
+      {
+        "primary_id": "CASH2-P08",
+        "primary_name": "违规出借资金",
+        "sub_id": "CASH2-S029",
+        "visible": true
+      },
+      {
+        "primary_id": "CASH2-P09",
+        "primary_name": "未按规定对有关专项资金实行专户管理和使用",
+        "sub_id": "CASH2-S031",
+        "visible": true
+      },
+      {
+        "primary_id": "CASH2-P10",
+        "primary_name": "中小企业账款拖欠",
+        "sub_id": "CASH2-S033",
+        "visible": true
+      },
+      {
+        "primary_id": "CASH2-P11",
+        "primary_name": "核心业务持续亏损",
+        "sub_id": "CASH2-S035",
+        "visible": true
+      }
+    ],
+    "property": [
+      {
+        "primary_id": "PTY2-P01",
+        "primary_name": "未按规定履行决策和审批程序转让、划转国有产权",
+        "sub_id": "PTY2-S003",
+        "visible": true
+      },
+      {
+        "primary_id": "PTY2-P02",
+        "primary_name": "超越授权范围转让、划转国有产权",
+        "sub_id": "PTY2-S006",
+        "visible": true
+      },
+      {
+        "primary_id": "PTY2-P03",
+        "primary_name": "财务审计和资产评估违反相关规定",
+        "sub_id": "PTY2-S035",
+        "visible": true
+      },
+      {
+        "primary_id": "PTY2-P04",
+        "primary_name": "隐匿应当纳入审计、评估范围的资产，组织提供和披露虚假信息，授意、指使中介机构出具虚假财务审计、资产评估鉴证结果及法律意见书等",
+        "sub_id": "PTY2-S011",
+        "visible": true
+      },
+      {
+        "primary_id": "PTY2-P05",
+        "primary_name": "未按相关规定执行回避制度",
+        "sub_id": "PTY2-S014",
+        "visible": true
+      },
+      {
+        "primary_id": "PTY2-P06",
+        "primary_name": "违反相关规定和公开公平交易原则，低价转让企业产权、上市公司股权和资产等",
+        "sub_id": "PTY2-S016",
+        "visible": true
+      },
+      {
+        "primary_id": "PTY2-P07",
+        "primary_name": "违反规定进行国有资产交易流转",
+        "sub_id": "PTY2-S037",
+        "visible": true
+      },
+      {
+        "primary_id": "PTY2-P08",
+        "primary_name": "未按规定履行国有股东标识管理程序，违规管理国有企业名称、企业名称中的字号，违规使用企业许可证件、资质证明文件",
+        "sub_id": "PTY2-S038",
+        "visible": true
+      },
+      {
+        "primary_id": "PTY2-P09",
+        "primary_name": "未按规定办理国家出资企业产权登记，违反规定使用国有资产产权登记证（表）",
+        "sub_id": "PTY2-S028",
+        "visible": true
+      },
+      {
+        "primary_id": "PTY2-P10",
+        "primary_name": "违反规定代持股权、虚假控股、控股不控权、虚假合资、挂靠经营等",
+        "sub_id": "PTY2-S032",
+        "visible": true
+      }
+    ],
+    "commit": "345bec9"
+  },
+  "ui_results": [
+    {
+      "name": "R32-01 默认全部专题",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 资金11项一级",
+      "ok": true,
+      "detail": "11 项一级场景"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P01",
+      "ok": true,
+      "detail": "违反决策和审批程序筹集和使用资金"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P02",
+      "ok": true,
+      "detail": "超越权限筹集和使用资金"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P03",
+      "ok": true,
+      "detail": "设立“小金库”"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P04",
+      "ok": true,
+      "detail": "违反规定集资、发行股票或债券、捐赠、担保、委托理财、拆借资金或开立信用证、办理银行票据等"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P05",
+      "ok": true,
+      "detail": "虚列支出套取资金"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P06",
+      "ok": true,
+      "detail": "违反规定自定薪酬，超发、滥发职工薪酬福利"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P07",
+      "ok": true,
+      "detail": "因财务内控缺失或未按照财务内控制度执行，发生资金挪用、侵占、盗取、欺诈等"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P08",
+      "ok": true,
+      "detail": "违规出借资金"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P09",
+      "ok": true,
+      "detail": "未按规定对有关专项资金实行专户管理和使用"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P10",
+      "ok": true,
+      "detail": "中小企业账款拖欠"
+    },
+    {
+      "name": "R32-01 可见 CASH2-P11",
+      "ok": true,
+      "detail": "核心业务持续亏损"
+    },
+    {
+      "name": "R32-03 业务区无未启用标签",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-03 无草稿占位S001",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 可执行 S039",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 可执行 S006",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 可执行 S017",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 可执行 S020",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P01 代表 CASH2-S040",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P02 代表 CASH2-S039",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P03 代表 CASH2-S006",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P04 代表 CASH2-S012",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P05 代表 CASH2-S017",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P06 代表 CASH2-S020",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P07 代表 CASH2-S024",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P08 代表 CASH2-S029",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P09 代表 CASH2-S031",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P10 代表 CASH2-S033",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 CASH2-P11 代表 CASH2-S035",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 S039 可打开对象清单",
+      "ok": true,
+      "detail": "监测对象清单（观察期） CASH2-S039 实付超过该笔有效批准金额 AI分析 ✕ 海油工程总部（含下级）｜2026-01-01~2026-06-30｜截至 2026-06-30｜全部专题 对象类型 对象 已评估/应评估规则数 归属观"
+    },
+    {
+      "name": "R32-04 资金专题 CASH2-T-ACCOUNT 有可执行行",
+      "ok": true,
+      "detail": "rows=2 groups=2"
+    },
+    {
+      "name": "R32-04 资金专题 CASH2-T-PAYMENT 有可执行行",
+      "ok": true,
+      "detail": "rows=6 groups=5"
+    },
+    {
+      "name": "R32-04 资金专题 CASH2-T-FINANCE 有可执行行",
+      "ok": true,
+      "detail": "rows=1 groups=1"
+    },
+    {
+      "name": "R32-04 资金专题 CASH2-T-OPERATION 有可执行行",
+      "ok": true,
+      "detail": "rows=1 groups=1"
+    },
+    {
+      "name": "R32-04 资金专题 CASH2-T-SPECIAL 有可执行行",
+      "ok": true,
+      "detail": "rows=1 groups=1"
+    },
+    {
+      "name": "R32-04 资金专题 CASH2-T-OPERATING 有可执行行",
+      "ok": true,
+      "detail": "rows=1 groups=1"
+    },
+    {
+      "name": "R32-15 资金首页仍有小趋势",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-05 默认产权交易",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-05 经济行为可见",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-05 默认非上市企业产权转让",
+      "ok": true,
+      "detail": "nonlisted_transfer"
+    },
+    {
+      "name": "R32-05 肩形流程可见",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-05 全部场景入口",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-15 首页无字母公式",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-15 首页四卡无趋势",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-05 无独立当前环节大卡",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-05 点环节上区不变",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-06 登记无经济行为下拉",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-06 登记无肩形流程",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-06 登记场景可见",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-06 登记不残留交易一级P01",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-07 标识无交易流程",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-07 标识可见P08",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-07 控制权无交易流程",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-10 控制权专业核查S032",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-07 返回交易恢复经济行为",
+      "ok": true,
+      "detail": "nonlisted_transfer"
+    },
+    {
+      "name": "R32-07 返回交易流程可见",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-08 全部行为无肩形流程",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-09 无偿划转无价款逾期行",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-09 无偿划转仍有决策规则",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-09 有偿转让可见价款规则",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-10 交易可见专业核查S011",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-02/08 全部场景10项",
+      "ok": true,
+      "detail": "10 项一级场景"
+    },
+    {
+      "name": "R32-08 全部场景无交易流程",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-02 PTY2-P01 代表 PTY2-S003",
+      "ok": true,
+      "detail": "未按规定履行决策和审批程序转让、划转国有产权"
+    },
+    {
+      "name": "R32-02 PTY2-P02 代表 PTY2-S006",
+      "ok": true,
+      "detail": "超越授权范围转让、划转国有产权"
+    },
+    {
+      "name": "R32-02 PTY2-P03 代表 PTY2-S035",
+      "ok": true,
+      "detail": "财务审计和资产评估违反相关规定"
+    },
+    {
+      "name": "R32-02 PTY2-P04 代表 PTY2-S011",
+      "ok": true,
+      "detail": "隐匿应当纳入审计、评估范围的资产，组织提供和披露虚假信息，授意、指使中介机构出具虚假财务审计、资产评估鉴证结果及法律意见书等"
+    },
+    {
+      "name": "R32-02 PTY2-P05 代表 PTY2-S014",
+      "ok": true,
+      "detail": "未按相关规定执行回避制度"
+    },
+    {
+      "name": "R32-02 PTY2-P06 代表 PTY2-S016",
+      "ok": true,
+      "detail": "违反相关规定和公开公平交易原则，低价转让企业产权、上市公司股权和资产等"
+    },
+    {
+      "name": "R32-02 PTY2-P07 代表 PTY2-S037",
+      "ok": true,
+      "detail": "违反规定进行国有资产交易流转"
+    },
+    {
+      "name": "R32-02 PTY2-P08 代表 PTY2-S038",
+      "ok": true,
+      "detail": "未按规定履行国有股东标识管理程序，违规管理国有企业名称、企业名称中的字号，违规使用企业许可证件、资质证明文件"
+    },
+    {
+      "name": "R32-02 PTY2-P09 代表 PTY2-S028",
+      "ok": true,
+      "detail": "未按规定办理国家出资企业产权登记，违反规定使用国有资产产权登记证（表）"
+    },
+    {
+      "name": "R32-02 PTY2-P10 代表 PTY2-S032",
+      "ok": true,
+      "detail": "违反规定代持股权、虚假控股、控股不控权、虚假合资、挂靠经营等"
+    },
+    {
+      "name": "R32-03 产权业务区无未启用",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-01 S037 可打开命中对象",
+      "ok": true,
+      "detail": "命中对象清单（观察期） PTY2-S037 到期转让价款尚未足额收取 AI分析 ✕ 海油工程总部（含下级）｜2026-01-01~2026-06-30｜截至 2026-06-30｜产权交易 对象类型 对象 已评估/应评估规则数 归属观察"
+    },
+    {
+      "name": "R32-10 S011 可打开专业核查事项",
+      "ok": true,
+      "detail": "未关闭事项清单（截至日） PTY2-S011 应纳入审计评估的资产疑似漏列 AI分析 ✕ 海油工程总部（含下级）｜2026-01-01~2026-06-30｜截至 2026-06-30｜产权交易 事项 名称 等级 办理状态 责任单位 逾"
+    },
+    {
+      "name": "R32-03 配置保留完整目录线索",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "R32-16 总览入口可打开",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "ui_commit": "345bec9"
+}

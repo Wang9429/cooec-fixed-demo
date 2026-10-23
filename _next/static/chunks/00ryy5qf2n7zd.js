@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,31713,e=>{"use strict";var t=e.i(43476),s=e.i(71645),u=e.i(18566);e.s(["default",0,function(){let e=(0,u.useRouter)();return(0,s.useEffect)(()=>{e.replace("/overview")},[e]),(0,t.jsx)("p",{className:"p-6 text-[13px] text-textsub",children:"正在进入综合总览…"})}])}]);

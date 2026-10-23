@@ -1,0 +1,268 @@
+{
+  "base": "https://wang9429.github.io/-",
+  "stamp": {
+    "version": "FP-20260917-R3.2",
+    "commit": "ddd087a",
+    "full": "ddd087a62e68a603e20ec4a16bed225d054a60f9",
+    "stamped_at": "github-pages-build"
+  },
+  "passed": 50,
+  "failed": 1,
+  "results": [
+    {
+      "id": "入口总览",
+      "ok": true,
+      "detail": "海油工程\n穿透式监管平台\n综合总览\n固定资产投资管理\n股权投资管理\n国际化业务\n资金管理\n产权管理\n工程项目管理\n系统配置\n数据说明\n穿透式监管/综合总览\n监管"
+    },
+    {
+      "id": "侧栏资金",
+      "ok": true,
+      "detail": "资金页已打开"
+    },
+    {
+      "id": "资金刷新",
+      "ok": true,
+      "detail": "直接刷新仍见指标区"
+    },
+    {
+      "id": "侧栏产权",
+      "ok": true,
+      "detail": "产权页已打开"
+    },
+    {
+      "id": "产权刷新",
+      "ok": true,
+      "detail": "直接刷新仍见指标区"
+    },
+    {
+      "id": "侧栏配置",
+      "ok": true,
+      "detail": "海油工程\n穿透式监管平台\n综合总览\n固定资产投资管理\n股权投资管理\n国际化业务\n资金管理\n产权管理\n工程项目管理\n系统配"
+    },
+    {
+      "id": "返回总览",
+      "ok": true,
+      "detail": "侧栏回到总览"
+    },
+    {
+      "id": "Pages部署提交",
+      "ok": true,
+      "detail": "{\"version\":\"FP-20260917-R3.2\",\"commit\":\"ddd087a\",\"full\":\"ddd087a62e68a603e20ec4a16bed225d054a60f9\",\"stamped_at\":\"github-pages-build\"}"
+    },
+    {
+      "id": "资金三分类",
+      "ok": true,
+      "detail": "三分类标签可见"
+    },
+    {
+      "id": "资金趋势保留",
+      "ok": true,
+      "detail": "首页小趋势节点存在"
+    },
+    {
+      "id": "营业收入抽屉仅盈利能力",
+      "ok": true,
+      "detail": "营业收入 / 营业利润 / 营业利润率 / 净资产收益率"
+    },
+    {
+      "id": "组织穿透节点",
+      "ok": true,
+      "detail": "当前节点：海油工程总部"
+    },
+    {
+      "id": "抽屉趋势",
+      "ok": true,
+      "detail": "详情趋势区"
+    },
+    {
+      "id": "资金业务区无未启用启停",
+      "ok": true,
+      "detail": "可见子场景 12"
+    },
+    {
+      "id": "资金业务区无开发文案",
+      "ok": true,
+      "detail": "无"
+    },
+    {
+      "id": "资金11项未回退",
+      "ok": true,
+      "detail": "展开后子场景行 12"
+    },
+    {
+      "id": "产权交易流程默认",
+      "ok": true,
+      "detail": "经济行为+肩形流程"
+    },
+    {
+      "id": "产权上区无趋势",
+      "ok": true,
+      "detail": "上区无趋势图节点"
+    },
+    {
+      "id": "产权上区无常显公式",
+      "ok": true,
+      "detail": "纳管法人户数\n›\n10\n户\n控股及实际控制企业户数\n›\n5\n户\n全资4户／非全资1户\n参股企业户数\n›\n1\n户\n在办产权事项数\n›\n12\n项"
+    },
+    {
+      "id": "点击环节更新下方",
+      "ok": true,
+      "detail": "环节按钮 9"
+    },
+    {
+      "id": "产权登记隐藏交易流程",
+      "ok": true,
+      "detail": "已隐藏"
+    },
+    {
+      "id": "产权登记上区指标不变",
+      "ok": true,
+      "detail": "上区仍在"
+    },
+    {
+      "id": "标识与名称资质隐藏交易流程",
+      "ok": true,
+      "detail": "已隐藏"
+    },
+    {
+      "id": "标识与名称资质上区指标不变",
+      "ok": true,
+      "detail": "上区仍在"
+    },
+    {
+      "id": "股权与控制权隐藏交易流程",
+      "ok": true,
+      "detail": "已隐藏"
+    },
+    {
+      "id": "股权与控制权上区指标不变",
+      "ok": true,
+      "detail": "上区仍在"
+    },
+    {
+      "id": "切回交易恢复流程",
+      "ok": true,
+      "detail": "交易流程重新出现"
+    },
+    {
+      "id": "持股60/60/55分行",
+      "ok": true,
+      "detail": "三行来源+基准日+待核实"
+    },
+    {
+      "id": "持股未拼成一行",
+      "ok": true,
+      "detail": "两个60%仍分列"
+    },
+    {
+      "id": "关闭持股回到产权页",
+      "ok": true,
+      "detail": "详情关闭后仍在产权页"
+    },
+    {
+      "id": "S039命中核验",
+      "ok": true,
+      "detail": "800/1200/400/2000"
+    },
+    {
+      "id": "S039容差0",
+      "ok": true,
+      "detail": "货币精度容差"
+    },
+    {
+      "id": "S039正常4200",
+      "ok": true,
+      "detail": "正常付款未命中"
+    },
+    {
+      "id": "S039-无开发文案JSON",
+      "ok": true,
+      "detail": "未见原始JSON/开发验收文案"
+    },
+    {
+      "id": "1440详情无溢出",
+      "ok": true,
+      "detail": "{\"scroll\":false,\"clipped\":[]}"
+    },
+    {
+      "id": "S037价款",
+      "ok": true,
+      "detail": "800/480/320"
+    },
+    {
+      "id": "S037-无开发文案JSON",
+      "ok": true,
+      "detail": "未见原始JSON/开发验收文案"
+    },
+    {
+      "id": "S011场景详情",
+      "ok": true,
+      "detail": "场景详情打开"
+    },
+    {
+      "id": "S011材料任务",
+      "ok": true,
+      "detail": "材料与认领入口"
+    },
+    {
+      "id": "S011未写成已确认违规",
+      "ok": true,
+      "detail": "待核查"
+    },
+    {
+      "id": "S011-无开发文案JSON",
+      "ok": true,
+      "detail": "未见原始JSON/开发验收文案"
+    },
+    {
+      "id": "S011认领进入核查中",
+      "ok": true,
+      "detail": "核查中"
+    },
+    {
+      "id": "S011结论可保存",
+      "ok": true,
+      "detail": "办理后可见结论"
+    },
+    {
+      "id": "S011测试状态已还原",
+      "ok": true,
+      "detail": "默认展示未留下测试办理"
+    },
+    {
+      "id": "S032场景详情",
+      "ok": true,
+      "detail": "法人名称"
+    },
+    {
+      "id": "S032材料任务",
+      "ok": true,
+      "detail": "材料与认领"
+    },
+    {
+      "id": "S032未写成已确认违规",
+      "ok": true,
+      "detail": "待核查"
+    },
+    {
+      "id": "1280无按钮遮挡",
+      "ok": true,
+      "detail": "{\"overlap\":false,\"longName\":true,\"verticalId\":true,\"titleW\":144}"
+    },
+    {
+      "id": "1280长场景名称可读",
+      "ok": true,
+      "detail": "场景名称仍在"
+    },
+    {
+      "id": "1280编号非竖排",
+      "ok": false,
+      "detail": "编号未竖排"
+    },
+    {
+      "id": "1280-S037中文仍在",
+      "ok": true,
+      "detail": "1280价款表"
+    }
+  ]
+}
