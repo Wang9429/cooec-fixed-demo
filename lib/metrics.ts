@@ -332,7 +332,7 @@ export const INDICATORS: IndicatorDef[] = [
     leafObjectType: "fixed_asset_project",
     formula: "（预计完工投资 EAC 合计 − 有效批准概算合计） ÷ 有效批准概算合计 × 100%",
     caliber:
-      "仅纳入在建且预计完工投资数据完整的项目。EAC 由五项互斥构成去重合计；达到概算 95% 为关注、超过 100% 为高风险（等于 100% 按底稿只属于关注）。",
+      "仅纳入预计完工投资数据完整的项目。上级按预计完工投资合计与有效批准概算合计重算，不平均各项目偏差率。构成金额按互斥项目相加。已发布规则里的 95% 关注线仍待业务确认，本指标不改那条已发布规则。",
     sourceNote: "有效概算来自模拟批准概算记录，预测构成来自合同、变更及估算依据（模拟）",
     evaluate: (v) => (v === null ? "unknown" : v > 0 ? "risk" : v >= -5 ? "attention" : "normal"),
     leaves: (ctx) =>
@@ -385,12 +385,22 @@ export const INDICATORS: IndicatorDef[] = [
             { label: "账面净值", value: `${a.net_book_value} 万元` },
             { label: "原值", value: `${a.gross_value} 万元` },
             {
+              label: "最近季度利用率",
+              value: a.quarterly_utilization_history.at(-1)
+                ? `${a.quarterly_utilization_history.at(-1)!.period} ${a.quarterly_utilization_history.at(-1)!.actual_pct}%`
+                : "未记录",
+            },
+            { label: "适用阈值", value: `${a.utilization_threshold_pct}%` },
+            {
               label: "低利用率确认",
               value: a.low_utilization_confirmed
                 ? `已确认（${a.confirmation_date}）`
                 : "未确认",
             },
-            { label: "来源投资项目", value: a.source_project_id },
+            {
+              label: "来源投资项目",
+              value: seed.fixed_asset_projects.find((project) => project.id === a.source_project_id)?.name ?? "未关联项目",
+            },
           ],
           riskIds: risksFor(a.id, ctx),
           dataComplete: true,

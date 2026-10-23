@@ -3597,24 +3597,22 @@
       "period_end": "2026-06-30",
       "window_start": "2026-01-01",
       "window_end": "2026-06-30",
-      "result": "hit",
+      "result": "clear",
       "rule_version": "DEMO-RULES-V1.2",
       "inputs": {
         "ytd_plan": 1500,
         "ytd_completed_investment": 1200
       },
-      "formula": "EAC数据尚未完整，建设进度与计划偏差待核查",
-      "risk_ids": [
-        "R10"
-      ],
+      "formula": "记录只有同期计划与完成投资，没有预计完工投资和有效概算，不能按超概规则命中",
+      "risk_ids": [],
       "evidence_ids": [
         "EVID-R10"
       ],
       "data_nature": "simulated",
       "data_source": "synthetic_anonymous",
-      "effective_result": "hit",
-      "hit_validity": "retained_pending_or_confirmed",
-      "generic_formula": "EAC数据尚未完整，建设进度与计划偏差待核查",
+      "effective_result": "clear",
+      "hit_validity": "no_hit",
+      "generic_formula": "记录只有同期计划与完成投资，没有预计完工投资和有效概算，不能按超概规则命中",
       "formula_role": "扩容样例观察记录",
       "input_snapshot_note": "合成监测快照，不改写原始典型事项输入。",
       "input_bindings": []
@@ -4096,7 +4094,7 @@
       "status": "pending_review",
       "current_task_due_date": "2026-07-15",
       "first_seen_at": "2026-06-18",
-      "rule_id": "FA-R20-01",
+      "rule_id": "MANUAL-REVIEW",
       "scenario_ids": [
         "FA-S20"
       ],
@@ -4235,7 +4233,7 @@
       "status": "investigating",
       "current_task_due_date": "2026-07-12",
       "first_seen_at": "2026-06-22",
-      "rule_id": "FA-R20-01",
+      "rule_id": "MANUAL-REVIEW",
       "scenario_ids": [
         "FA-S20"
       ],

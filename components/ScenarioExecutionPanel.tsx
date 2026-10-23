@@ -307,6 +307,11 @@ export default function ScenarioExecutionPanel({
         };
       })
       .filter((r) => {
+        if (domain === "FA" && phaseId) {
+          const sub = liveSub(r.id);
+          const phases = [sub?.primary_phase_id, ...(sub?.associated_phase_ids ?? [])].filter((id): id is string => Boolean(id));
+          if (phases.length > 0 && !phases.includes(phaseId)) return false;
+        }
         if (catalogMode) {
           return hasEffectiveExecutableRule(r.id, filters.asOf) && scenarioFitsBehavior(r.id, behaviorId);
         }
@@ -715,22 +720,33 @@ export default function ScenarioExecutionPanel({
         </div>
 
         <div className="overflow-x-auto -mx-1 px-1" data-testid="scenario-exec-table">
-          <table className="w-full min-w-[1080px] border-separate border-spacing-0 text-[14px]">
+          <table className={`w-full ${expandRules ? "min-w-[960px]" : "min-w-[1080px]"} border-separate border-spacing-0 text-[14px]`}>
             <thead>
-              <tr className="bg-[#f6f8fc]">
-                <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line">监管子场景</th>
-                <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[132px]">执行状态</th>
-                <th className="px-3 py-2.5 text-right text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[130px]">已评估/应评估对象</th>
-                <th className="px-3 py-2.5 text-right text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[110px]">命中规则数</th>
-                <th className="px-3 py-2.5 text-right text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[110px]">命中对象数</th>
-                <th className="px-3 py-2.5 text-right text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[110px]">未关闭整改</th>
-                <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[96px]">查看详情</th>
-              </tr>
+              {expandRules ? (
+                <tr className="bg-[#f6f8fc]">
+                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line w-[220px]">监管子场景</th>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line">关键监控数据</th>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line w-[180px]">规则执行</th>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line w-[160px]">命中对象</th>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line w-[180px]">关联事项</th>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[88px]">依据</th>
+                </tr>
+              ) : (
+                <tr className="bg-[#f6f8fc]">
+                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line">监管子场景</th>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[132px]">执行状态</th>
+                  <th className="px-3 py-2.5 text-right text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[130px]">已评估/应评估对象</th>
+                  <th className="px-3 py-2.5 text-right text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[110px]">命中规则数</th>
+                  <th className="px-3 py-2.5 text-right text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[110px]">命中对象数</th>
+                  <th className="px-3 py-2.5 text-right text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[110px]">未关闭整改</th>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-semibold text-textsub border-b border-line whitespace-nowrap w-[96px]">查看详情</th>
+                </tr>
+              )}
             </thead>
             <tbody>
               {visibleScenarioRows.length === 0 && groupedRows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-4 text-center text-[13px] text-textsub border-b border-line">
+                  <td colSpan={expandRules ? 6 : 7} className="px-3 py-4 text-center text-[13px] text-textsub border-b border-line">
                     {scenarioRows.length === 0 ? "当前范围没有已启用且可实际执行的监管规则。" : "当前筛选条件下没有匹配场景，请调整搜索或筛选。"}
                   </td>
                 </tr>
@@ -741,7 +757,7 @@ export default function ScenarioExecutionPanel({
                 return (
                   <React.Fragment key={group.id}>
                     <tr className="bg-[#f7f9fd]" data-testid={`scenario-group-${group.id}`}>
-                      <td colSpan={7} className="px-3 py-2 border-b border-line">
+                      <td colSpan={expandRules ? 6 : 7} className="px-3 py-2 border-b border-line">
                         <button
                           type="button"
                           className="inline-flex items-center gap-2 text-[13px] font-medium text-textmain text-left"
@@ -777,6 +793,17 @@ export default function ScenarioExecutionPanel({
                             r.statusLabelText === "无业务");
                         const showAdoption =
                           r.adoption === "结构化监测" || r.adoption === "线索核查" || r.adoption === "专业核查";
+                        const monitoredIds = [...new Set(r.rows.map((record) => record.monitoring_object_id))];
+                        const factText =
+                          faScenarioFacts(r.id, monitoredIds, filters.asOf, orgIds, allowedObjectIds) ??
+                          "本场景当前没有可汇总的业务监测值。";
+                        const scenarioCases = r.counts.openRiskIds
+                          .map((id) => asOfRisks.find((item) => item.id === id))
+                          .filter((item): item is RiskCase => Boolean(item));
+                        const lines = expandRules ? ruleLinesFor(r, scenarioCases) : [];
+                        const linkedCaseIds = new Set(lines.flatMap((line) => line.openCases.map((item) => item.id)));
+                        const unmatchedCases = scenarioCases.filter((item) => !linkedCaseIds.has(item.id));
+                        const hitObjects = [...new Map(lines.flatMap((line) => line.hitObjects).map((item) => [item.objectId, item])).values()];
                         return (
                         <React.Fragment key={r.id}>
                           <tr className="hover:bg-tint border-b border-line" data-testid={`scenario-sub-${r.id}`}>
@@ -790,26 +817,57 @@ export default function ScenarioExecutionPanel({
                                 {showAdoption && (
                                   <Tag tone={r.adoption === "结构化监测" ? "brand" : "neutral"}>{r.adoption}</Tag>
                                 )}
-                                {expandRules && (
-                                  <span className="block text-[12px] text-textsub mt-1 break-words leading-5">
-                                    {ruleLinesFor(r, []).length
-                                      ? `规则 ${ruleLinesFor(r, []).map((line) => line.id).join("、")}`
-                                      : "当前子场景没有可列出的监测规则"}
-                                  </span>
-                                )}
-                                {expandRules && domain === "FA" && (
-                                  <span className="block text-[12px] text-textmain mt-1 break-words leading-5" data-testid={`scenario-facts-${r.id}`}>
-                                    {faScenarioFacts(
-                                      r.id,
-                                      [...new Set(r.rows.map((record) => record.monitoring_object_id))],
-                                      filters.asOf,
-                                      orgIds,
-                                      allowedObjectIds,
-                                    ) ?? "本场景当前没有可汇总的业务监测值。"}
-                                  </span>
-                                )}
                               </button>
                             </td>
+                            {expandRules && (
+                              <>
+                                <td className="px-3 py-2 align-top text-[12px] text-textmain leading-5 break-words" data-testid={`scenario-facts-${r.id}`}>
+                                  {factText}
+                                </td>
+                                <td className="px-3 py-2 align-top text-[12px] leading-5">
+                                  {lines.length === 0 ? (
+                                    <span className="text-textsub">未配置规则</span>
+                                  ) : (
+                                    lines.map((line) => (
+                                      <span key={line.id} className="block">
+                                        <span className="num">{line.id}</span> <Tag tone={line.statusTone}>{line.statusLabel}</Tag>
+                                      </span>
+                                    ))
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 align-top text-[12px] leading-5">
+                                  {hitObjects.length === 0 ? (
+                                    <span className="text-textsub">—</span>
+                                  ) : (
+                                    hitObjects.map((item) => (
+                                      <button key={item.objectId} type="button" className="block text-left text-brand hover:underline" onClick={() => onOpenObject?.(item.objectId)}>
+                                        {objectName(item.objectId)}
+                                      </button>
+                                    ))
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 align-top text-[12px] leading-5">
+                                  {lines.flatMap((line) => line.openCases).length === 0 && unmatchedCases.length === 0 ? (
+                                    <span className="text-textsub">—</span>
+                                  ) : (
+                                    <>
+                                      {lines.flatMap((line) => line.openCases).map((item) => (
+                                        <button key={item.id} type="button" className="block text-left text-brand hover:underline" onClick={() => onOpenRisk(item.id)}>
+                                          {item.id} {item.title}
+                                        </button>
+                                      ))}
+                                      {unmatchedCases.length > 0 && (
+                                        <span className="block text-textsub" data-testid={`scenario-unmatched-${r.id}`}>
+                                          另有 {unmatchedCases.map((item) => item.id).join("、")} 未由上述规则命中
+                                        </span>
+                                      )}
+                                    </>
+                                  )}
+                                </td>
+                              </>
+                            )}
+                            {!expandRules && (
+                            <>
                             <td className="px-3 py-2 align-top">
                               <span className="inline-flex flex-wrap items-center gap-1">
                                 <Tag tone={r.statusTone}>{r.statusLabelText}</Tag>
@@ -876,17 +934,19 @@ export default function ScenarioExecutionPanel({
                                 </button>
                               )}
                             </td>
+                            </>
+                            )}
                             <td className="px-3 py-2 align-top whitespace-nowrap">
                               <LinkButton
                                 onClick={() => setOpenRowId((id) => (id === r.id ? null : r.id))}
                               >
-                                {openRowId === r.id ? "收起" : expandRules ? "规则明细" : "查看详情"}
+                                {openRowId === r.id ? "收起" : expandRules ? "计算依据" : "查看详情"}
                               </LinkButton>
                             </td>
                           </tr>
                           {openRowId === r.id && expandRules && (
                             <tr className="bg-[#fbfcfe]">
-                              <td colSpan={7} className="px-4 py-3 border-b border-line">
+                              <td colSpan={expandRules ? 6 : 7} className="px-4 py-3 border-b border-line">
                                 {(() => {
                                   const lines = ruleLinesFor(
                                     r,
@@ -989,7 +1049,7 @@ export default function ScenarioExecutionPanel({
                           )}
                           {openRowId === r.id && !expandRules && (
                             <tr className="bg-[#fbfcfe]">
-                              <td colSpan={7} className="px-4 py-3 text-[13px] border-b border-line">
+                              <td colSpan={expandRules ? 6 : 7} className="px-4 py-3 text-[13px] border-b border-line">
                                 <div className="flex flex-wrap gap-x-5 gap-y-2">
                                   <button type="button" className="hover:text-brand" onClick={() => setDetail({ kind: "closed", scenarioId: r.id })}>
                                     本期完成整改 <span className="num font-medium">{r.counts.rectifiedClosedRiskIds.length}</span> 件

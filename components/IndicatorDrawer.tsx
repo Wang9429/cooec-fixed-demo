@@ -28,7 +28,7 @@ import { catalogIndicatorMeta } from "@/lib/live-config";
 import { categoryIdOf, computeTrendPoints, eligibleTrendPoints, trendSpecOf } from "@/lib/fp-trend";
 import { DetailTrend } from "@/components/fp/MetricTrend";
 import { isPropertyCensusIndicator } from "@/lib/fp-catalog";
-import { MAJOR_PROJECT_CALIBER, majorProjectIds } from "@/lib/investment-focus";
+import { FOCUS_PROJECT_LABEL, MAJOR_PROJECT_CALIBER, majorProjectIds } from "@/lib/investment-focus";
 
 function statusTag(m: NodeMetric) {
   switch (m.status) {
@@ -556,7 +556,7 @@ function IndicatorDrawerBody({
                   onChange={(e) => setMajorOnly(e.target.checked)}
                   data-testid="major-project-only"
                 />
-                只看重大投资项目
+                只看{FOCUS_PROJECT_LABEL}
               </label>
             )}
           </div>
@@ -767,14 +767,14 @@ function IndicatorDrawerBody({
                 <span>指标构成与业务明细</span>
                 <span className="text-[12px] text-textsub" data-detail-count>
                   {projectFocus && majorOnly
-                    ? `重大投资项目 ${displayDetailLeaves.length} 个；指标仍按全部适用对象汇总`
+                    ? `${FOCUS_PROJECT_LABEL} ${displayDetailLeaves.length} 个；指标仍按全部适用对象汇总`
                     : `共 ${detailLeaves.length} 个对象，按对象 ID 去重`}
                 </span>
               </div>
               {displayDetailLeaves.length === 0 ? (
                 <div className="px-4 py-8 text-center text-[13px] text-textsub">
                   {projectFocus && majorOnly && detailLeaves.length > 0
-                    ? "当前节点没有重大投资项目。取消“只看重大投资项目”后可查看其余项目。"
+                    ? `当前节点没有${FOCUS_PROJECT_LABEL}。取消勾选后可查看其余项目。`
                     : "当前范围无业务，不显示 0% 或正常绿灯"}
                 </div>
               ) : (
